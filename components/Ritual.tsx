@@ -5,7 +5,7 @@
 // má vlastní moment) → předání nahoru pro streaming výkladu.
 // Animace jen přes transform a opacity. prefers-reduced-motion: rozlet a flip
 // nahrazeny crossfady, struktura a časování zůstávají.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CardBack, CardFace } from "./TarotCard";
 import { CARD_BY_ID } from "@/lib/cards";
@@ -79,49 +79,60 @@ export default function Ritual({
   const snappingRef = useRef(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const wheelRef = useRef<HTMLDivElement | null>(null);
-  const [vw, setVw] = useState(390);
+  // FIX desktop v2 (report zakladatele: kolo po načtení v rohu, resize
+  // ho spravil = závodní podmínka prvního měření). Strukturální řešení:
+  // šířka startuje jako NULL a karty se NEVYKRESLÍ, dokud není šířka
+  // změřená z živého elementu - žádný fallback na window.innerWidth,
+  // žádný první nástřel se špatnou hodnotou. Měří se synchronně před
+  // vykreslením (useLayoutEffect), znovu v dalším framu (chytí pozdní
+  // layout - fonty, scrollbar) a průběžně přes ResizeObserver.
+  const [vw, setVw] = useState<number | null>(null);
 
-  // FIX desktop (v1.5 §5.11 + report zakladatele): viewportRef existuje
-  // až ve fázi "picking" - měření jen při mountu spadlo na window.innerWidth
-  // (na desktopu ~1920), zatímco skutečný kontejner má ~750 px. Střed kola
-  // se pak spočítal daleko vpravo a vybraná karta byla "na rohu okna".
-  // Řešení: měřit při každém vstupu do fáze picking + ResizeObserver na
-  // samotném kontejneru (chytí i změnu velikosti okna a rotaci displeje).
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (phase !== "picking") return;
     const el = viewportRef.current;
-    const update = () =>
-      setVw(viewportRef.current?.clientWidth ?? Math.min(window.innerWidth, 768));
-    update();
-    window.addEventListener("resize", update);
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setVw((prev) => (prev === w ? prev : w));
+    };
+    measure();
+    const raf = requestAnimationFrame(measure); // druhé přeměření po layoutu
+    window.addEventListener("resize", measure);
     let ro: ResizeObserver | null = null;
-    if (el && typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver(update);
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(measure);
       ro.observe(el);
     }
     return () => {
-      window.removeEventListener("resize", update);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
       ro?.disconnect();
     };
   }, [phase]);
 
-  // Po změně šířky (vstup do picking, resize) se mění radius/stepDeg ->
-  // úhel kola se musí přepočítat, ať fokusovaná karta zůstane uprostřed.
+  // Změna šířky mění radius/stepDeg -> úhel kola se přepočítá ze stavu,
+  // ať fokusovaná karta sedí uprostřed (jde přes setState, takže render
+  // a transform nikdy nerozjedou).
   useEffect(() => {
-    if (phase !== "picking") return;
+    if (phase !== "picking" || vw === null) return;
     applyAngle(-focusedIndex * stepDeg, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vw, phase]);
 
-  const cardW = vw < 360 ? 44 : vw < 480 ? 52 : 64; // min 44 px = tap cíl
+  // Geometrie: dokud není změřeno, drž bezpečné mobilní hodnoty (karty
+  // se stejně nevykreslují - viz gate v renderu níže).
+  const vwSafe = vw ?? 390;
+  const cardW = vwSafe < 360 ? 44 : vwSafe < 480 ? 52 : 64; // min 44 px = tap cíl
   const cardH = Math.round(cardW * 2.5);
   // Poloměr ~300–340 podle šířky; krok vyladěný na viditelnou hranu
   // ~24 px (hrana = r * krok_rad), v mezích ~5–6,5°. Finální doladění
   // kroku/hrany patří na reálné zařízení (checklist E).
-  const radius = Math.min(340, Math.max(300, Math.round(vw * 0.82)));
+  const radius = Math.min(340, Math.max(300, Math.round(vwSafe * 0.82)));
   const stepDeg = Math.min(6.5, Math.max(5, (24 / radius) * (180 / Math.PI)));
   const WINDOW_DEG = 60; // vykresluje se okno ~120° (±60°)
   const fanH = Math.round(radius + cardH / 2 - 110 + 12);
-  const cx = vw / 2;
+  const cx = vwSafe / 2;
   const cy = fanH + 110;
   const K = 0.35; // °/px (citlivost dragu dle E)
   const minAngle = -(DECK_SIZE - 1) * stepDeg;
@@ -476,7 +487,9 @@ export default function Ritual({
               transition: "filter 0.4s",
             }}
           >
-          {/* Jediný rotující kontejner: střed kola pod spodní hranou */}
+          {/* Jediný rotující kontejner: střed kola pod spodní hranou.
+              GATE: karty se vykreslí až po reálném změření šířky (vw) -
+              první paint tak nikdy nepoužije špatný střed (desktop bug). */}
           <div
             ref={wheelRef}
             className="absolute will-change-transform"
@@ -488,7 +501,7 @@ export default function Ritual({
               transform: `rotate(${angle}deg)`,
             }}
           >
-            {Array.from({ length: hi - lo }).map((_, k) => {
+            {vw !== null && Array.from({ length: hi - lo }).map((_, k) => {
               const i = lo + k;
               const isHeld = held.some((h) => h.index === i);
               const focused = i === focusedIndex;
