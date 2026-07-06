@@ -122,6 +122,10 @@ export default function Ritual({
 
   // Geometrie: dokud není změřeno, drž bezpečné mobilní hodnoty (karty
   // se stejně nevykreslují - viz gate v renderu níže).
+  // FIX desktop v3: horizontální střed kola už NEZÁVISÍ na měřené šířce
+  // vůbec - kotví se čistým CSS left: 50% (centruje vždy, i kdyby měření
+  // vrátilo cokoli). vwSafe zůstává jen pro velikosti karet a poloměr,
+  // kde případná odchylka nic neposune, jen mírně změní křivost.
   const vwSafe = vw ?? 390;
   const cardW = vwSafe < 360 ? 44 : vwSafe < 480 ? 52 : 64; // min 44 px = tap cíl
   const cardH = Math.round(cardW * 2.5);
@@ -132,7 +136,6 @@ export default function Ritual({
   const stepDeg = Math.min(6.5, Math.max(5, (24 / radius) * (180 / Math.PI)));
   const WINDOW_DEG = 60; // vykresluje se okno ~120° (±60°)
   const fanH = Math.round(radius + cardH / 2 - 110 + 12);
-  const cx = vwSafe / 2;
   const cy = fanH + 110;
   const K = 0.35; // °/px (citlivost dragu dle E)
   const minAngle = -(DECK_SIZE - 1) * stepDeg;
@@ -390,7 +393,7 @@ export default function Ritual({
               const gap = cardCount >= 5 ? 6 : 10;
               const slotW = Math.max(
                 36,
-                Math.min(68, Math.floor((vw - gap * (cardCount + 1)) / cardCount))
+                Math.min(68, Math.floor((vwSafe - gap * (cardCount + 1)) / cardCount))
               );
               const slotH = Math.round(slotW * 1.6);
               return (
@@ -494,7 +497,7 @@ export default function Ritual({
             ref={wheelRef}
             className="absolute will-change-transform"
             style={{
-              left: cx,
+              left: "50%", // střed VŽDY uprostřed kontejneru (fix v3)
               top: cy,
               width: 0,
               height: 0,
