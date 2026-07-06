@@ -36,7 +36,9 @@ async function handlePOST(req: NextRequest) {
     ledgerCookieHeader = ledgerSetCookieHeader(c.ledger);
   }
 
-  const text = mockReading(spread as SpreadKey, question ?? "", cards);
+  // Jméno z profilu (v1.5 §5.6, mock: cookie tol_name) - úvod výkladu
+  const profileName = decodeURIComponent(cookies().get("tol_name")?.value ?? "");
+  const text = mockReading(spread as SpreadKey, question ?? "", cards, profileName);
   const su = await sessionUser(cookies().get("tol_session")?.value);
   const email = su?.email ?? cookies().get("tol_email")?.value ?? null;
   const saved = await saveReading({

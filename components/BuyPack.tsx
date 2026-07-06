@@ -4,6 +4,7 @@
 // Připsání je idempotentní (webhook ref), zůstatek = SUM z ledgeru.
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { logEvent } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/useSession";
 import { vykladu } from "@/lib/declension";

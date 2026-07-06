@@ -35,10 +35,10 @@ export default function SpirioCTA({
         <h3 className="font-display text-2xl font-semibold text-body">
           Tohle pouto se nerozváže samo.
         </h3>
-        {/* v1.3 §3.10: copy DOSLOVA */}
+        {/* v1.5 §5.5: copy DOSLOVA včetně „právě teď" */}
         <p className="mt-3 text-body-dim">
-          AI výklad ti dá první vhled. Pokud chceš živý rozhovor, ověřené
-          průvodkyně na Spirio tě vyslechnou přes chat nebo hovor.
+          Chceš výklad od skutečné kartářky? Na SPIRIO se můžeš spojit s
+          ověřenými kartářkami a průvodkyněmi právě teď.
         </p>
         <a
           href={href}
@@ -61,10 +61,10 @@ export default function SpirioCTA({
       <h3 className="font-display text-xl font-semibold text-body">
         Chceš to probrat s živým člověkem?
       </h3>
-      {/* v1.3 §3.10: copy DOSLOVA */}
+      {/* v1.5 §5.5: copy DOSLOVA včetně „právě teď" */}
       <p className="mt-2 text-sm text-body-dim">
-        AI výklad ti dá první vhled. Pokud chceš živý rozhovor, ověřené
-        průvodkyně na Spirio tě vyslechnou přes chat nebo hovor.
+        Chceš výklad od skutečné kartářky? Na SPIRIO se můžeš spojit s
+        ověřenými kartářkami a průvodkyněmi právě teď.
       </p>
       <a
         href={href}

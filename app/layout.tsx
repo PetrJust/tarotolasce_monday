@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Lora, Inter, Fraunces } from "next/font/google";
+import { Lora, Inter } from "next/font/google";
 import "./globals.css";
 import { SITE_URL } from "@/lib/site";
 import Header from "@/components/Header";
@@ -7,9 +7,9 @@ import Footer from "@/components/Footer";
 import CookieBanner from "@/components/CookieBanner";
 import { PERSONA_NAME, PERSONA_FULL } from "@/lib/persona";
 
-// v1.3 §2: nadpisy H1/H2/H3 = Lora (nahrazuje Fraunces), tělo a UI = Inter.
-// latin-ext kvůli české diakritice, font-display: swap. Všechna typografická
-// pravidla z v1.1 D platí s Lorou.
+// v1.5 §3: nadpisy H1/H2/H3 = Lora, tělo a UI = Inter. latin-ext kvůli
+// české diakritice, font-display: swap. předchozí serif odstraněn z repa
+// (v1.5 checklist) - wordmark je v Loře (§5.8).
 const display = Lora({
   subsets: ["latin", "latin-ext"],
   weight: ["500", "600", "700"],
@@ -21,15 +21,7 @@ const sans = Inter({
   display: "swap",
   variable: "--font-sans",
 });
-// Logo: jediná povolená výjimka. Současný řez (Fraunces 600) zůstává,
-// dokud zakladatel pohledem nerozhodne Fraunces vs. Lora 600 (v1.3 §2).
-// Po rozhodnutí pro Loru: smazat tenhle import a v Headeru dát font-display.
-const logo = Fraunces({
-  subsets: ["latin", "latin-ext"],
-  weight: ["600"],
-  display: "swap",
-  variable: "--font-logo",
-});
+
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -38,13 +30,13 @@ export const metadata: Metadata = {
     template: "%s | Tarot o Lásce",
   },
   description:
-    `Polož otázku, vyber si karty a dostaň osobní tarotový výklad o lásce od AI kartářky ${PERSONA_NAME}. První výklad za 29 Kč.`,
+    `Porozumět lásce. Porozumět sobě. Polož otázku, vyber si karty a dostaň osobní tarotový výklad o lásce od AI kartářky ${PERSONA_NAME}. První výklad za 29 Kč.`,
   openGraph: {
     siteName: "Tarot o Lásce",
     locale: "cs_CZ",
     type: "website",
     description:
-      `Osobní tarotové výklady o lásce od AI kartářky ${PERSONA_NAME}. První výklad za 29 Kč, karta dne zdarma.`,
+      `Porozumět lásce. Porozumět sobě. Osobní tarotové výklady o lásce od AI kartářky ${PERSONA_NAME}. První výklad za 29 Kč, karta dne zdarma.`,
   },
   twitter: {
     card: "summary_large_image",
@@ -75,7 +67,7 @@ const webSiteJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="cs" className={`${display.variable} ${sans.variable} ${logo.variable}`}>
+    <html lang="cs" className={`${display.variable} ${sans.variable}`}>
       <body className="font-sans antialiased">
         <script
           type="application/ld+json"

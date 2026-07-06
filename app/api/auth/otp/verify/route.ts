@@ -17,7 +17,7 @@ function setSessionCookie(token: string) {
   cookies().set("tol_session", token, {
     httpOnly: true, sameSite: "lax", path: "/",
     secure: process.env.NODE_ENV === "production",
-    maxAge: 30 * 86400,
+    maxAge: 90 * 86400, // v1.5 §5.10
   });
 }
 

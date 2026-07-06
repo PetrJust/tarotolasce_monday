@@ -28,6 +28,7 @@ async function handleGET() {
     // (buď přes OTP_DEV_PREVIEW jako devCode, nebo přes TEST_OTP_CODE
     // jako testCode - klient teď umí použít oba).
     devLoginAvailable: (!isProd || allowDevTools) && (otpDevPreview || hasTestOtpCode),
+    commitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
   });
 }
 export const GET = withApiGuard(handleGET);

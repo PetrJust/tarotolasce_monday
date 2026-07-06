@@ -1,25 +1,28 @@
 "use client";
-import { palette, tokens, NIGHT_FLAT } from "@/lib/palette";
+import { tokens } from "@/lib/palette";
 import { logEvent } from "@/lib/analytics";
 // Karta dne (6.5): zdarma, 1x denně (mock: per browser přes cookie),
 // rituál s výběrem 1 karty, krátký výklad, Sdílet na Stories (1080x1920),
 // jemná nabídka „Chceš se zeptat na něco svého?"
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Ritual, { PickedCard } from "@/components/Ritual";
+import type { PickedCard } from "@/components/Ritual";
+import { CardBack } from "@/components/TarotCard";
 import ReadingStream from "@/components/ReadingStream";
 import OtpInput from "@/components/OtpInput";
 import { PERSONA_NAME, PERSONA_FULL } from "@/lib/persona";
 import { getCookie, setCookie } from "@/lib/clientState";
 
-type Phase = "intro" | "ritual" | "reading" | "done" | "already";
+// v1.5 §5.2: BEZ rituálu - karta rubem nahoru hned po načtení,
+// jeden dotek = otočeno. Rituální obrazovky patří jen placenému výkladu.
+type Phase = "loading" | "ready" | "reading" | "done" | "already";
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function KartaDnePage() {
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>("loading");
   const [sessionId, setSessionId] = useState("");
   const [card, setCard] = useState<PickedCard | null>(null);
   const [text, setText] = useState("");
@@ -27,25 +30,49 @@ export default function KartaDnePage() {
 
   useEffect(() => {
     const last = getCookie("tol_daily");
-    if (last === todayKey()) setPhase("already");
-  }, []);
-
-  async function start() {
+    if (last === todayKey()) {
+      setPhase("already");
+      return;
+    }
+    // Zamíchání proběhne samo při načtení (krátká animace na rubu níže)
     if (startedRef.current) return;
     startedRef.current = true;
-    const res = await fetch("/api/session/shuffle", {
+    fetch("/api/session/shuffle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ spread: "daily" }),
-    }).then((r) => r.json());
-    setSessionId(res.sessionId);
-    setPhase("ritual");
-  }
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        setSessionId(res.sessionId);
+        setPhase("ready");
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  function onComplete(cards: PickedCard[]) {
-    setCard(cards[0]);
-    setCookie("tol_daily", todayKey(), 2);
-    setPhase("reading");
+  // Jeden dotek = otočeno (v1.5 §5.2)
+  const flippingRef = useRef(false);
+  async function flip() {
+    if (phase !== "ready" || flippingRef.current || !sessionId) return;
+    flippingRef.current = true;
+    try {
+      const index = Math.floor(Math.random() * 78);
+      const res = await fetch("/api/session/pick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, index }),
+      });
+      if (!res.ok) return;
+      const picked: PickedCard = await res.json();
+      navigator.vibrate?.(12);
+      logEvent("daily_card_flip", { cardId: picked.cardId });
+      setCard(picked);
+      setCookie("tol_daily", todayKey(), 2);
+      setPhase("reading");
+    } finally {
+      flippingRef.current = false;
+    }
   }
 
   // Denní karta: double opt-in KÓDEM (v1.1 B.3). Po odeslání e-mailu se
@@ -56,6 +83,24 @@ export default function KartaDnePage() {
   const [optinError, setOptinError] = useState<string | null>(null);
   const [optinBusy, setOptinBusy] = useState(false);
   const [optinDevCode, setOptinDevCode] = useState<string | null>(null);
+  // v1.5 §5.2: přihlášené předvyplnit ověřenou adresu; aktivace 1 klepnutím
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.email) {
+          setSessionEmail(d.email);
+          setOptinEmail(d.email);
+        }
+      })
+      .catch(() => {});
+  }, []);
+  async function activateForLoggedIn() {
+    // Adresa už je ověřená přihlášením - aktivace bez dalšího kódu
+    logEvent("daily_card_optin", { verified: "session" });
+    setOptinStep("done");
+  }
   async function submitOptin() {
     // MOCK: v produkci pošle skutečný e-mail (kód v předmětu)
     const res = await fetch("/api/auth/otp/request", {
@@ -92,67 +137,103 @@ export default function KartaDnePage() {
   // Sdílet na Stories: obrázek 1080x1920 s kartou, logem a doménou
   function shareToStories() {
     if (!card) return;
+    // Stories export v2 (v1.5 §5.8): blush pozadí, nahoře dvoubarevný
+    // wordmark, jméno karty, JEDNA věta vzkazu v uvozovkách (první věta,
+    // truncate ~90 znaků na hranici věty), uprostřed tmavá karta se
+    // zlatým rámem, dole DOSLOVA „Vytáhni si tu svoji na tarotolasce.cz".
+    // PNG 1080x1920; SAFE ZÓNY: horních ~250 px a spodních ~310 px bez
+    // klíčového obsahu. Obrácená karta: otočený název + „(obráceně)".
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
     canvas.height = 1920;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // v1.3 §1: žádný gradient, plochá noční fialová
-    ctx.fillStyle = NIGHT_FLAT;
+    const SAFE_TOP = 250;
+    const SAFE_BOTTOM = 310; // obsah končí nad 1920-310 = 1610
+
+    // Pozadí: blush (tokens v3), plochá
+    ctx.fillStyle = tokens.blush;
     ctx.fillRect(0, 0, 1080, 1920);
-
-    // Logo
-    ctx.fillStyle = palette.cream.DEFAULT;
-    ctx.font = "600 64px Georgia, serif";
     ctx.textAlign = "center";
-    ctx.fillText("Tarot o Lásce", 540, 220);
-    ctx.fillStyle = tokens.gold600;
-    ctx.font = "44px Georgia, serif";
-    ctx.fillText("Karta dne", 540, 300);
 
-    // Karta (zjednodušený líc)
-    const cw = 520;
-    const ch = 860;
+    // Dvoubarevný wordmark (pod horní safe zónou)
+    ctx.font = "600 66px Lora, Georgia, serif";
+    const w1 = "Tarot ";
+    const w2 = "o Lásce";
+    const totalW = ctx.measureText(w1).width + ctx.measureText(w2).width;
+    ctx.textAlign = "left";
+    ctx.fillStyle = tokens.deepPlum;
+    ctx.fillText(w1, 540 - totalW / 2, SAFE_TOP + 70);
+    ctx.fillStyle = tokens.romanticPink;
+    ctx.fillText(w2, 540 - totalW / 2 + ctx.measureText(w1).width, SAFE_TOP + 70);
+    ctx.textAlign = "center";
+
+    // Jméno karty (obrácená: popisek „(obráceně)")
+    ctx.fillStyle = tokens.deepPlum;
+    ctx.font = "600 58px Lora, Georgia, serif";
+    ctx.fillText(card.reversed ? `${card.name} (obráceně)` : card.name, 540, SAFE_TOP + 170);
+
+    // Jedna věta vzkazu v uvozovkách: první věta, truncate ~90 znaků
+    // na hranici věty (když je první věta delší, zkrátí se s výpustkou).
+    const firstSentence = (text.match(/[^.!?]*[.!?]/)?.[0] ?? text).trim();
+    let quote = firstSentence;
+    if (quote.length > 90) quote = quote.slice(0, 87).trimEnd() + "…";
+    ctx.font = "38px Inter, Arial, sans-serif";
+    ctx.fillStyle = "#5E486B"; // text-dim odvozenina
+    // jednoduché zalomení na max 2 řádky
+    const words = `„${quote}"`.split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + " " + w : w;
+      if (ctx.measureText(t).width > 880 && line) {
+        lines.push(line);
+        line = w;
+      } else line = t;
+    }
+    if (line) lines.push(line);
+    lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, 540, SAFE_TOP + 250 + i * 52));
+
+    // Tmavá karta se zlatým rámem uprostřed
+    const cw = 480;
+    const ch = 780;
     const cx = (1080 - cw) / 2;
-    const cy = 420;
-    ctx.fillStyle = palette.cream.DEFAULT;
+    const cy = 640;
+    ctx.fillStyle = tokens.deepPlum;
     ctx.beginPath();
-    ctx.roundRect(cx, cy, cw, ch, 36);
+    ctx.roundRect(cx, cy, cw, ch, 32);
     ctx.fill();
-    ctx.strokeStyle = palette.night.DEFAULT;
-    ctx.lineWidth = 8;
+    ctx.strokeStyle = tokens.softGold;
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.roundRect(cx + 24, cy + 24, cw - 48, ch - 48, 24);
+    ctx.roundRect(cx + 22, cy + 22, cw - 44, ch - 44, 22);
     ctx.stroke();
-    ctx.strokeStyle = tokens.gold600;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(cx + 44, cy + 44, cw - 88, ch - 88, 16);
+    ctx.roundRect(cx + 40, cy + 40, cw - 80, ch - 80, 14);
     ctx.stroke();
 
     ctx.save();
     if (card.reversed) {
+      // otočený název/symbol uvnitř karty
       ctx.translate(540, cy + ch / 2);
       ctx.rotate(Math.PI);
       ctx.translate(-540, -(cy + ch / 2));
     }
-    ctx.fillStyle = palette.night.soft;
-    ctx.font = "220px Georgia, serif";
-    ctx.fillText(card.symbol ?? "✦", 540, cy + ch / 2 + 40);
-    ctx.fillStyle = palette.night.DEFAULT;
-    ctx.font = "600 52px Georgia, serif";
-    ctx.fillText(card.name, 540, cy + ch - 110);
+    ctx.fillStyle = tokens.softGold;
+    ctx.font = "200px Georgia, serif";
+    ctx.fillText(card.symbol ?? "✦", 540, cy + ch / 2 + 30);
+    ctx.fillStyle = tokens.blush;
+    ctx.font = "600 46px Lora, Georgia, serif";
+    ctx.fillText(card.name, 540, cy + ch - 90);
     ctx.restore();
 
-    ctx.fillStyle = palette.cream.dim;
-    ctx.font = "40px Georgia, serif";
-    ctx.fillText(card.reversed ? `${card.name} (obráceně)` : card.name, 540, cy + ch + 110);
-
-    // Doména
-    ctx.fillStyle = tokens.gold600;
-    ctx.font = "600 48px Georgia, serif";
-    ctx.fillText("tarotolasce.cz", 540, 1800);
+    // Dole DOSLOVA (nad spodní safe zónou)
+    ctx.fillStyle = tokens.deepPlum;
+    ctx.font = "600 44px Inter, Arial, sans-serif";
+    ctx.fillText("Vytáhni si tu svoji na tarotolasce.cz", 540, 1920 - SAFE_BOTTOM - 40);
+    void SAFE_BOTTOM;
 
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -172,17 +253,21 @@ export default function KartaDnePage() {
       </h1>
       <p className="mt-2 text-sm text-body-dim">Vybírá a vykládá {PERSONA_FULL}</p>
 
-      {phase === "intro" && (
-        <div className="mt-6">
-          <p className="max-w-xl text-body-dim">
-            Jedna karta a krátký vzkaz pro tvůj den. Zdarma, každý den jedna.
-            Nadechni se a vytáhni si tu svoji.
+      {/* v1.5 §5.2: rovnou karta rubem nahoru, nad ní DOSLOVA
+          „Klepni a otoč." Krátká zamíchací animace proběhne sama při
+          načtení (CSS shake na rubu). Jeden dotek = otočeno. */}
+      {(phase === "loading" || phase === "ready") && (
+        <div className="mt-8 text-center">
+          <p className="font-display text-2xl font-semibold text-body">
+            Klepni a otoč.
           </p>
           <button
-            onClick={start}
-            className="btn-primary mt-8"
+            onClick={flip}
+            disabled={phase !== "ready"}
+            aria-label="Otočit dnešní kartu"
+            className="daily-shuffle mx-auto mt-6 block w-32 transition hover:scale-[1.03] disabled:cursor-wait"
           >
-            Vytáhnout dnešní kartu
+            <CardBack className="h-auto w-full drop-shadow-card" />
           </button>
         </div>
       )}
@@ -201,24 +286,6 @@ export default function KartaDnePage() {
             Chceš se zeptat na něco svého?
           </Link>
         </div>
-      )}
-
-      {phase === "ritual" && (
-        <Ritual
-          sessionId={sessionId}
-          cardCount={1}
-          positions={["Dnešní karta"]}
-          onReshuffle={async () => {
-            const res = await fetch("/api/session/shuffle", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ spread: "daily" }),
-            }).then((r) => r.json());
-            setSessionId(res.sessionId);
-            return res.sessionId as string;
-          }}
-          onComplete={onComplete}
-        />
       )}
 
       {(phase === "reading" || phase === "done") && card && (
@@ -242,7 +309,6 @@ export default function KartaDnePage() {
             onDone={(full) => {
               setText(full);
               setPhase("done");
-              logEvent("daily_card_flip", { cardId: card?.cardId });
             }}
           />
 
@@ -269,8 +335,7 @@ export default function KartaDnePage() {
               <div className="mx-auto mt-6 max-w-md rounded-2xl border border-surface bg-surface p-5 text-left">
                 {optinStep === "done" ? (
                   <p className="text-sm text-body-dim">
-                    Hotovo, karta dne ti od zítřka začne chodit každé ráno.
-                    V každém e-mailu najdeš odhlášení.
+                    Hotovo — každé ráno ti dáme vědět, že na tebe karta čeká.
                   </p>
                 ) : optinStep === "code" ? (
                   <>
@@ -309,6 +374,20 @@ export default function KartaDnePage() {
                         Upravit adresu
                       </button>
                     </div>
+                  </>
+                ) : sessionEmail ? (
+                  <>
+                    {/* v1.5 §5.2: přihlášená - adresa už ověřená, 1 klepnutí */}
+                    <p className="font-medium text-body">
+                      Chceš kartu dne dostávat každé ráno?
+                    </p>
+                    <p className="mt-1 text-sm text-body-dim">{sessionEmail}</p>
+                    <button
+                      onClick={activateForLoggedIn}
+                      className="mt-3 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-plum-900 hover:opacity-90"
+                    >
+                      Chci
+                    </button>
                   </>
                 ) : (
                   <>
@@ -363,7 +442,7 @@ export default function KartaDnePage() {
               tah ze všech 78 karet tarotu, včetně obrácených pozic, a AI kartářka k
               ní napíše krátký výklad zaměřený na lásku, vztahy a to, co se
               děje v tobě. Pokud tě karta zaujme a chceš jít hloub, můžeš se
-              zeptat na vlastní otázku a nechat si vyložit celý rozklad.
+              zeptat na vlastní otázku a nechat si vyložit karty.
             </p>
             <p>
               Tip na závěr: nezapisuj si jen karty, ale hlavně to, co v tobě

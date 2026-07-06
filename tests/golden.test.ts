@@ -166,3 +166,94 @@ describe("dikce G (v1.1): zákazy a stavba", () => {
     }
   });
 });
+
+
+// ---------- v1.5 §6: rozšíření eval brány ----------
+import { DECK } from "../lib/cards";
+
+const YESNO_10: Array<[string, ReturnType<typeof CARD>[]]> = [
+  ["Mám mu napsat?", [CARD("mesic", true)]],
+  ["Ozve se ještě?", [CARD("slunce", false)]],
+  ["Miluje mě?", [CARD("dvojka-pohary", false)]],
+  ["Mám na něj čekat?", [CARD("osmicka-pohary", false)]],
+  ["Má cenu to zkoušet znovu?", [CARD("kolo-stesti", true)]],
+  ["Mám mu odpustit?", [CARD("spravedlnost", false)]],
+  ["Je to láska?", [CARD("eso-pohary", false)]],
+  ["Mám jít na to rande?", [CARD("blazen", false)]],
+  ["Mám to ukončit?", [CARD("smrt", false)]],
+  ["Myslí to vážně?", [CARD("kral-pohary", true)]],
+];
+
+const SIX = (ids: string[]) => {
+  const pos = ["Co bylo", "Proč to skončilo", "Co tě drží", "Co pustit", "Lekce", "Co dál"];
+  return ids.map((id, i) => CARD(id, i % 3 === 1, pos[i]));
+};
+const MYEX_10: Array<[string, ReturnType<typeof CARD>[]]> = [
+  // pozn.: kombinace mag/vez/…/hvezda je referenční SAMPLE (vrací se doslova),
+  // proto tu jede jiná - SAMPLE má vlastní test níže
+  ["Co mě na něm pořád drží?", SIX(["mag", "vez", "trojka-mece", "osmicka-pohary", "poustevnik", "svet"])],
+  ["Proč na něj pořád myslím?", SIX(["mesic", "dvojka-mece", "sestka-pohary", "dabel", "mirnost", "svet"])],
+  ["Vrátí se ke mně?", SIX(["kolo-stesti", "vez", "petka-pohary", "ctyrka-pohary", "viselec", "slunce"])],
+  ["Uzavřela jsem to doopravdy?", SIX(["smrt", "osmicka-mece", "trojka-pohary", "rytir-mece", "soud", "eso-hole"])],
+  ["Co jsem si z toho měla vzít?", SIX(["veleknezka", "cisar", "petka-mece", "sedmicka-pohary", "poustevnik", "hvezda"])],
+  ["Proč to nešlo?", SIX(["zamilovani", "vuz", "petka-hole", "desitka-mece", "sila", "eso-pentakly"])],
+  ["Mám mu dát ještě šanci?", SIX(["dvojka-pohary", "mesic", "ctyrka-hole", "sedmicka-mece", "spravedlnost", "slunce"])],
+  ["Byla to moje chyba?", SIX(["cisarovna", "vez", "devitka-mece", "petka-pentakly", "mirnost", "sestka-hole"])],
+  ["Co s tou prázdnotou po něm?", SIX(["ctyrka-pohary", "poustevnik", "trojka-mece", "osmicka-pohary", "hvezda", "eso-pohary"])],
+  ["Jak ho pustit?", SIX(["dabel", "viselec", "sestka-pohary", "osmicka-pohary", "soud", "blazen"])],
+];
+
+describe("v1.5 §6.1: golden +10 na typ (1 karta a 6 karet)", () => {
+  it("jednokaretní: dikce G + směr 2x + struktura", () => {
+    for (const [q, cards] of YESNO_10) {
+      const t = mockReading("yesno", q, cards);
+      expect(t.startsWith("Karty se teď kloní spíš k ")).toBe(true);
+      const tail = t.slice(Math.floor(t.length / 2));
+      expect(/spíš (ano|ne)/.test(tail)).toBe(true);
+      expect(t).not.toContain("!");
+      expect(t.toLowerCase()).not.toContain("vibrac");
+      expect(t.toLowerCase()).not.toContain("vesmír");
+      expect(t.trim().endsWith("Nomi, tvoje AI kartářka")).toBe(true);
+    }
+  });
+
+  it("šestikaretní: 6 bloků, dikce G, bez opakované věty mezi pozicemi", () => {
+    for (const [q, cards] of MYEX_10) {
+      const t = mockReading("my_ex", q, cards);
+      const blocks = t.split("\n\n").filter((p) => p.startsWith("✦"));
+      expect(blocks.length).toBe(6);
+      const bodies = blocks.map((b) => b.split("\n")[1] ?? "");
+      expect(new Set(bodies).size).toBe(bodies.length); // žádná opakovaná věta
+      expect(t).not.toContain("!");
+      expect(t.toLowerCase()).not.toContain("pro tvoje srdce");
+    }
+  });
+});
+
+describe("v1.5 §6.2: placená jednokarta != karta dne", () => {
+  it("struktura: směr + proč (z karty) + co s tím + na co pozor; bohatší než ranní vzkaz", () => {
+    const paid = mockReading("yesno", "Mám na něj čekat?", [CARD("mesic", true)]);
+    const daily = mockReading("daily", "", [CARD("mesic", true, "Dnešní karta")]);
+    expect(paid.startsWith("Karty se teď kloní")).toBe(true); // jasný směr
+    expect(paid).toContain("✦"); // proč - blok z karty
+    expect(paid).toContain("Na co si dát pozor:"); // na co pozor
+    expect(paid.length).toBeGreaterThan(daily.length * 1.5); // výrazně bohatší
+  });
+});
+
+describe("v1.5 §6.3: gramatická shoda (nález „je tu první plody\")", () => {
+  it("celý balíček 78 karet bez rozbité shody v uvození", () => {
+    for (const c of DECK) {
+      for (const rev of [false, true]) {
+        const t = mockReading("between_us", "Jak to mezi námi je?", [
+          CARD(c.id, rev, "Já"),
+          CARD("slunce", false, "On"),
+          CARD("mesic", false, "My"),
+        ]);
+        expect(t).not.toContain("je tu první plody");
+        expect(t).not.toContain("že je tu"); // odstraněné rizikové uvození
+        expect(t).not.toContain("ukazuje na máš");
+      }
+    }
+  });
+});

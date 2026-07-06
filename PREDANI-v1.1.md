@@ -301,3 +301,70 @@ každý požadavek může obsloužit JINÁ serverless instance s vlastním /tmp.
   neznal e-mail a nutil checkout i s kredity).
 - ZBÝVAJÍCÍ ZNÁMÝ LIMIT: uložené výklady (lib/store) jsou dál v /tmp -
   historie/trvalé odkazy můžou mezi instancemi „mizet". Řeší až DB.
+
+---
+
+# SESSION 5: zadání v1.5 KONSOLIDOVANÉ - zpracováno
+
+BLOKER §4 zodpovězen v PR-POPIS.md (první věc; závěr: trojí ANO zatím
+není - mock cookie ledger nesplní testy c+e, produkce = PostgreSQL).
+
+**Hotovo v tomhle kole:**
+- Verze buildu viditelná v /dev/kredit (lib/version.ts, APP_VERSION
+  v1.5.0 + commit sha z Vercelu) - žádost zakladatele.
+- Vějíř: FIX desktop bugu (měření šířky až ve fázi picking +
+  ResizeObserver; dřív spadlo na window.innerWidth a kolo ujelo do rohu);
+  instrukce DOSLOVA „Klepni na kartu."
+- §3 tokens v3: kompletní výměna palety (deep-plum #2B1340,
+  romantic-pink #E84D9A, blush #F7E6EC, powder-pink #FBEAF2 na boxech -
+  kontrast ověřen 14,3:1, soft-gold #D4AF37), AA odvozeniny spočítané
+  (odkazy #A2366C 5,3:1; text-dim #5E486B; disabled CTA #574566 8,6:1);
+  staré hexy grep = 0 (i v rgba stínech). Fraunces ODSTRANĚN, wordmark
+  v Loře.
+- §5.1 checkout: „Rozklad" řádek + přepínač pryč; „Nomi ti vyloží karty."
+  DOSLOVA; checkbox §1837 za flag SHOW_1837_CONSENT (default off, kód
+  zůstává; log rozhodnutí v PR-POPIS.md).
+- §5.2 karta dne: BEZ rituálu - karta rubem hned po načtení, „Klepni a
+  otoč." DOSLOVA, zamíchací animace sama (CSS, reduced-motion fallback),
+  jeden dotek = otočeno; přihlášená aktivuje pozvánku 1 klepnutím
+  (adresa ověřená session), potvrzení DOSLOVA; ranní e-mail = pozvánka
+  bez karty.
+- §5.3 „rozklad" grep = 0 (copy i komentáře); historie a uložený výklad
+  jen otázka + datum.
+- §5.4 Jak to funguje: tři řádky s 24px ikonkami karet, krok 2 DOSLOVA;
+  ukázky se štítky „1 karta · Ano/Ne" / „3 karty" / „6 karet".
+- §5.5 Spirio copy DOSLOVA vč. „právě teď" (carousel v buildu není -
+  KONFLIKT #1 v PR-POPIS).
+- §5.6 Profil v2: pořadí dle zadání; „Jak ti mám říkat?" (přeskočitelné,
+  editovatelné, cookie tol_name, propsané do úvodu výkladu s fallbackem
+  bez oslovení); Moje karta dne; poslední výklad + „Zatím sis vyložila
+  {n}…" DOSLOVA; kredit DOSLOVA ze SUM; přepínač ranní pozvánky
+  (cookie tol_daily_pref - mock, v produkci sloupec účtu); tichá řádka
+  na SPIRIO s utm_campaign=profile_row.
+- §5.7 menu: Karta dne · Historie · Ceník · Významy karet.
+- §5.8 logo: LogoSymbol (karta + zlatý rám + srdce), app/icon.svg
+  favicon, public/icon-512.svg, TOL pečeť na rubu karet i v patičce,
+  OG s dvoubarevným wordmarkem + tagline DOSLOVA, tagline v meta;
+  Stories v2 (blush, safe zóny 250/310, jedna věta ~90 znaků, tmavá
+  karta se zlatým rámem, „Vytáhni si tu svoji…" DOSLOVA, obrácená
+  otočený název + „(obráceně)"). Wordmark [ČEKÁ NA ROMANA].
+- §5.9: /reklamace = 301 na /obchodni-podminky, odkaz z patičky pryč;
+  DISCLAIMER = jedna konstanta (lib/site.ts) nahradila 3 lokální kopie
+  (2 z nich neměly „ani krizovou pomoc").
+- §5.10: session 90 dní ROLLING (GET /api/auth/session přepodepisuje).
+- §6: gramatická shoda opravena (dvojtečkové uvození bloků - „je tu
+  první plody" nemožné, ověřeno přes 78x2 karet); placená jednokarta =
+  směr + proč + co s tím + „Na co si dát pozor" (bohatší než denní,
+  ověřeno poměrem délek); golden +10 vstupů na typ 1 i 6; jméno
+  z profilu v úvodu s fallbackem. Headless: 78/78 průchodů.
+- §7: eventy sjednocené (view_pricing, checkout_start, purchase,
+  reading_completed s typem 1/3/6, feedback_submitted s prompt/model
+  verzí a typem, daily_card_flip na otočení, spirio_click s počtem a
+  zdrojem); Meta + TikTok pixel s TVRDÝM consent gatingem
+  (lib/pixels.ts: bez „Přijmout vše" se nenačte nic; CAPI = produkční
+  TODO s komentářem).
+
+**Zbývá mimo kód:** reálné zařízení (vějíř 60 fps, Lora „j"), Roman
+(OP/OOU texty, wordmark schválení), GPT balíček (finální disclaimer
+sekce 19), pixel ID do env, Meta Test Events / TikTok debug, migrace
+na PostgreSQL (BLOKER), e-mail infra DNS.

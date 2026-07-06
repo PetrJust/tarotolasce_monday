@@ -36,11 +36,20 @@ export default function Image() {
             gap: 18,
           }}
         >
-          <div style={{ fontSize: 34, color: tokens.gold600, letterSpacing: 4 }}>
+          {/* Dvoubarevný wordmark (v1.5 §5.8) */}
+          <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>
+            <span style={{ color: palette.cream.DEFAULT }}>Tarot&nbsp;</span>
+            <span style={{ color: tokens.romanticPink }}>o Lásce</span>
+          </div>
+          <div style={{ fontSize: 30, color: tokens.softGold, letterSpacing: 4 }}>
             KARTA DNE
           </div>
-          <div style={{ fontSize: 92, fontWeight: 600 }}>{card.name}</div>
-          <div style={{ fontSize: 30, color: palette.cream.dim }}>
+          <div style={{ fontSize: 88, fontWeight: 600 }}>{card.name}</div>
+          {/* Tagline DOSLOVA */}
+          <div style={{ fontSize: 28, color: palette.cream.dim }}>
+            Porozumět lásce. Porozumět sobě.
+          </div>
+          <div style={{ fontSize: 26, color: palette.cream.dim }}>
             tarotolasce.cz
           </div>
         </div>

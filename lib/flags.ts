@@ -42,3 +42,10 @@ export function setDevCreditsOverride(value: boolean | null) {
 }
 
 export const CREDITS_ENV_DEFAULT = ENV_DEFAULT;
+
+
+// v1.5 §5.1: checkbox §1837 se NEZOBRAZUJE (rozhodnutí zakladatele
+// 6. 7. 2026, log v PR-POPIS.md). Kód checkboxu zůstává za tímhle flagem;
+// právo na odstoupení 14 dní trvá. Zapnutí: NEXT_PUBLIC_SHOW_1837_CONSENT=1.
+export const SHOW_1837_CONSENT =
+  process.env.NEXT_PUBLIC_SHOW_1837_CONSENT === "1";

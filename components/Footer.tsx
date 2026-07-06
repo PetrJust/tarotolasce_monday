@@ -1,3 +1,5 @@
+import { DISCLAIMER } from "@/lib/site";
+import { TolSeal } from "@/components/LogoSymbol";
 import { PERSONA_FULL } from "@/lib/persona";
 import Link from "next/link";
 import { OPERATOR, OPERATOR_ICO, CONTACT_EMAIL } from "@/lib/site";
@@ -18,16 +20,15 @@ export default function Footer() {
           <Link href="/kontakt" className="hover:text-cream">Kontakt</Link>
           <Link href="/obchodni-podminky" className="hover:text-cream">Obchodní podmínky</Link>
           <Link href="/ochrana-osobnich-udaju" className="hover:text-cream">Ochrana osobních údajů</Link>
-          <Link href="/reklamace" className="hover:text-cream">Reklamace</Link>
         </nav>
         <p>
           18+ · Všechny výklady vytváří {PERSONA_FULL} · Provozovatel: {OPERATOR}{OPERATOR_ICO ? `, IČO: ${OPERATOR_ICO}` : ""} · <a href={`mailto:${CONTACT_EMAIL}`} className="text-rose-500 hover:text-cream">{CONTACT_EMAIL}</a>
         </p>
-        <p>
-          Tarot o Lásce je nástroj reflexe pro zábavu a sebepoznání. Nenahrazuje
-          profesionální terapii, medicínskou péči ani krizovou pomoc. V krizi kontaktuj Linku
-          první psychické pomoci: <a href="tel:116123" className="text-rose-500 hover:text-cream">116 123</a>.
-        </p>
+        <p>{DISCLAIMER}</p>
+        {/* Submark patičky: pečeť TOL (v1.5 §5.8) */}
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+          <TolSeal size={22} />
+        </div>
       </div>
     </footer>
   );

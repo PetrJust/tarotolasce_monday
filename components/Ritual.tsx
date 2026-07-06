@@ -81,12 +81,36 @@ export default function Ritual({
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const [vw, setVw] = useState(390);
 
+  // FIX desktop (v1.5 §5.11 + report zakladatele): viewportRef existuje
+  // až ve fázi "picking" - měření jen při mountu spadlo na window.innerWidth
+  // (na desktopu ~1920), zatímco skutečný kontejner má ~750 px. Střed kola
+  // se pak spočítal daleko vpravo a vybraná karta byla "na rohu okna".
+  // Řešení: měřit při každém vstupu do fáze picking + ResizeObserver na
+  // samotném kontejneru (chytí i změnu velikosti okna a rotaci displeje).
   useEffect(() => {
-    const update = () => setVw(viewportRef.current?.clientWidth ?? window.innerWidth);
+    const el = viewportRef.current;
+    const update = () =>
+      setVw(viewportRef.current?.clientWidth ?? Math.min(window.innerWidth, 768));
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+    let ro: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(update);
+      ro.observe(el);
+    }
+    return () => {
+      window.removeEventListener("resize", update);
+      ro?.disconnect();
+    };
+  }, [phase]);
+
+  // Po změně šířky (vstup do picking, resize) se mění radius/stepDeg ->
+  // úhel kola se musí přepočítat, ať fokusovaná karta zůstane uprostřed.
+  useEffect(() => {
+    if (phase !== "picking") return;
+    applyAngle(-focusedIndex * stepDeg, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vw, phase]);
 
   const cardW = vw < 360 ? 44 : vw < 480 ? 52 : 64; // min 44 px = tap cíl
   const cardH = Math.round(cardW * 2.5);
@@ -403,7 +427,7 @@ export default function Ritual({
               );
             })()}
 
-            {/* Pozice rozkladu (reveal) */}
+            {/* Pozice karet (reveal) */}
             {(phase === "revealing" || phase === "done") && (
               <Spread
                 held={held}
@@ -518,7 +542,7 @@ export default function Ritual({
           {/* Tichý hint, dokud uživatelka nevybere první kartu */}
           {!fanFull && held.length === 0 && (
             <span className="pointer-events-none absolute inset-x-0 bottom-1 z-[60] text-center text-xs text-body-dim/80">
-              Klepni na prostřední kartu, nebo táhni pro výběr
+              Klepni na kartu.
             </span>
           )}
           </div>
@@ -539,7 +563,7 @@ export default function Ritual({
   );
 }
 
-// Rozklad karet s sekvenčním 3D flipem; obrácená karta má vlastní moment.
+// Otočení karet se sekvenčním 3D flipem; obrácená karta má vlastní moment.
 function Spread({
   held,
   positions,

@@ -43,21 +43,24 @@ function CardBackSvg({ className = "" }: { className?: string }) {
     >
       {/* v1.3 §1: žádný gradient - plochá noční fialová */}
       <rect width="120" height="200" rx="10" fill={palette.night.DEFAULT} />
-      <rect x="5" y="5" width="110" height="190" rx="7" fill="none" stroke={tokens.gold600} strokeWidth="1.4" />
-      <rect x="10" y="10" width="100" height="180" rx="5" fill="none" stroke={tokens.gold600} strokeWidth="0.7" />
+      <rect x="5" y="5" width="110" height="190" rx="7" fill="none" stroke={tokens.softGold} strokeWidth="1.4" />
+      <rect x="10" y="10" width="100" height="180" rx="5" fill="none" stroke={tokens.softGold} strokeWidth="0.7" />
       {/* Centrální osmicípá hvězda */}
-      <g stroke={tokens.gold600} strokeWidth="1.2" fill="none">
+      <g stroke={tokens.softGold} strokeWidth="1.2" fill="none">
         <path d="M60 62 L68 92 L98 100 L68 108 L60 138 L52 108 L22 100 L52 92 Z" />
         <path d="M60 76 L65 95 L84 100 L65 105 L60 124 L55 105 L36 100 L55 95 Z" strokeWidth="0.8" />
         <circle cx="60" cy="100" r="7" />
       </g>
-      {/* Srpek měsíce nahoře a dole */}
-      <g fill={tokens.gold600}>
+      {/* Srpek měsíce nahoře; dole pečeť TOL (v1.5 §5.8) */}
+      <g fill={tokens.softGold}>
         <path d="M60 24 a 9 9 0 1 0 0.01 0 M60 27 a 7 7 0 1 1 -0.01 0" fillRule="evenodd" opacity="0.9" />
-        <path d="M60 162 a 9 9 0 1 0 0.01 0 M60 165 a 7 7 0 1 1 -0.01 0" fillRule="evenodd" opacity="0.9" />
+      </g>
+      <g opacity="0.9">
+        <circle cx="60" cy="170" r="9" fill="none" stroke={tokens.softGold} strokeWidth="0.9" />
+        <text x="60" y="172.6" textAnchor="middle" fontSize="6" fontFamily="Lora, serif" fontWeight="600" fill={tokens.softGold} letterSpacing="0.4">TOL</text>
       </g>
       {/* Rohové hvězdičky */}
-      <g fill={tokens.gold600} opacity="0.85">
+      <g fill={tokens.softGold} opacity="0.85">
         {[
           [22, 28],
           [98, 28],
@@ -68,7 +71,7 @@ function CardBackSvg({ className = "" }: { className?: string }) {
         ))}
       </g>
       {/* Tečkovaný geometrický rastr */}
-      <g fill={tokens.gold600} opacity="0.5">
+      <g fill={tokens.softGold} opacity="0.5">
         {Array.from({ length: 5 }).map((_, r) =>
           Array.from({ length: 3 }).map((_, c) => (
             <circle key={`${r}-${c}`} cx={36 + c * 24} cy={44 + r * 28} r="0.9" />
@@ -124,7 +127,7 @@ function CardFaceSvg({
     >
       <rect width="120" height="200" rx="10" fill={palette.cream.DEFAULT} />
       <rect x="6" y="6" width="108" height="188" rx="7" fill="none" stroke={palette.night.DEFAULT} strokeWidth="1.6" />
-      <rect x="11" y="11" width="98" height="178" rx="4" fill="none" stroke={tokens.gold600} strokeWidth="1" />
+      <rect x="11" y="11" width="98" height="178" rx="4" fill="none" stroke={tokens.softGold} strokeWidth="1" />
       <g transform={reversed ? "rotate(180 60 100)" : undefined}>
         <text
           x="60"
@@ -145,7 +148,7 @@ function CardFaceSvg({
         >
           {card.name.length > 16 ? card.name.slice(0, 15) + "…" : card.name}
         </text>
-        <line x1="28" y1="160" x2="92" y2="160" stroke={tokens.gold600} strokeWidth="0.8" />
+        <line x1="28" y1="160" x2="92" y2="160" stroke={tokens.softGold} strokeWidth="0.8" />
       </g>
     </svg>
   );

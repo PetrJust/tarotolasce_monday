@@ -18,6 +18,7 @@ import {
 } from "@/lib/clientState";
 import { PRICES, PRICE_IDS } from "@/lib/pricing";
 import { announceSessionChange } from "@/lib/useSession";
+import { APP_VERSION, APP_VERSION_DATE, APP_VERSION_NOTE } from "@/lib/version";
 
 const PACKS = [
   { label: "5 výkladů", priceId: PRICE_IDS.pack5, price: PRICES.pack5 },
@@ -48,6 +49,7 @@ export default function DevKreditPage() {
     otpDevPreview: boolean;
     hasTestOtpCode: boolean;
     devLoginAvailable: boolean;
+    commitSha?: string | null;
   };
   const [envDiag, setEnvDiag] = useState<EnvDiag | null>(null);
   async function refreshEnvDiag() {
@@ -152,6 +154,13 @@ export default function DevKreditPage() {
       <h1 className="font-display text-[42px] leading-[1.1] font-semibold text-body">
         Testovací panel: kredit a balíčky
       </h1>
+      {/* Označení verze buildu (lib/version.ts - zvedá se s každým předáním) */}
+      <p className="mt-2 text-sm text-body-dim">
+        Build <strong className="text-body">{APP_VERSION}</strong> · {APP_VERSION_DATE}
+        {envDiag?.commitSha ? <> · commit <code className="text-xs">{envDiag.commitSha.slice(0, 7)}</code></> : null}
+        <br />
+        <span className="text-xs">{APP_VERSION_NOTE}</span>
+      </p>
       <p className="mt-3 max-w-xl text-body-dim">
         Kredit tady běží proti skutečnému serverovému účtu (mock store):
         přihlásíš se, koupíš balíček přes API a zůstatek čteš stejně jako

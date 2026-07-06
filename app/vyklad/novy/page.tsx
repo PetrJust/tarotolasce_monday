@@ -13,9 +13,10 @@ import ReadingFeedback from "@/components/ReadingFeedback";
 import { spirioUrl } from "@/components/SpirioCTA";
 import { SPREADS, SpreadKey, betweenUsPositions } from "@/lib/spreads";
 import { PRICES, PRICE_IDS } from "@/lib/pricing";
+import { DISCLAIMER } from "@/lib/site";
 import { vykladu } from "@/lib/declension";
-import { useCreditsEnabled } from "@/lib/flags";
-import { logEvent } from "@/lib/analytics";
+import { useCreditsEnabled, SHOW_1837_CONSENT } from "@/lib/flags";
+import { logEvent, readingType } from "@/lib/analytics";
 import {
   getSinglePurchases, bumpSinglePurchases,
   getFirstDone, setFirstDone, getEmail, setEmail as persistEmail,
@@ -42,10 +43,11 @@ function FlowInner() {
   const [step, setStep] = useState<Step>("question");
   const [question, setQuestion] = useState(params.get("q") ?? "");
   const [spread, setSpread] = useState<Exclude<SpreadKey, "daily">>("between_us");
-  const [showSpreadPicker, setShowSpreadPicker] = useState(false);
   const [email, setEmail] = useState("");
   const [emailConfirmed, setEmailConfirmed] = useState(false);
-  const [consent, setConsent] = useState(false);
+  // v1.5 §5.1: checkbox §1837 skrytý za flag - bez něj jsou platební
+  // tlačítka aktivní rovnou (validace e-mailu zůstává).
+  const [consent, setConsent] = useState(!SHOW_1837_CONSENT);
   const [sessionId, setSessionId] = useState("");
   const [cards, setCards] = useState<PickedCard[]>([]);
   const [readingId, setReadingId] = useState("");
@@ -68,7 +70,7 @@ function FlowInner() {
   useEffect(() => {
     if (step === "checkout" && !paywallSeen.current) {
       paywallSeen.current = true;
-      logEvent("paywall_view", { spread });
+      logEvent("checkout_start", { spread, type: readingType(spread) });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -224,8 +226,9 @@ function FlowInner() {
       setStep("payment_failed");
       return;
     }
-    logEvent("payment_success", {
+    logEvent("purchase", {
       spread,
+      type: readingType(spread),
       product: wantFirst ? "intro" : "single",
     });
     persistEmail(email);
@@ -365,36 +368,10 @@ function FlowInner() {
             </p>
             <p className="mt-4 text-body-dim">
               Tvoje otázka: „{question}"
-              <br />
-              Rozklad: {spreadDef.name}
             </p>
-            <button
-              onClick={() => setShowSpreadPicker((v) => !v)}
-              className="mt-2 text-sm text-body-dim underline decoration-rose-500/40 underline-offset-4 hover:text-body"
-            >
-              Raději chci jiný rozklad
-            </button>
-            {showSpreadPicker && (
-              <div className="mt-3 flex flex-col gap-2">
-                {(["yesno", "between_us", "my_ex"] as const).map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => {
-                      setSpread(k);
-                      setShowSpreadPicker(false);
-                    }}
-                    className={`rounded-xl border px-4 py-3 text-left text-sm ${
-                      spread === k
-                        ? "border-accent text-body"
-                        : "border-surface text-body-dim hover:text-body"
-                    }`}
-                  >
-                    {SPREADS[k].name} · {SPREADS[k].cardCount}{" "}
-                    {SPREADS[k].cardCount === 1 ? "karta" : SPREADS[k].cardCount <= 4 ? "karty" : "karet"}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* v1.5 §5.1 DOSLOVA (řádek s typem a přepínač typu
+                odstraněny - typ výkladu je interní algoritmus) */}
+            <p className="mt-1 text-body-dim">Nomi ti vyloží karty.</p>
 
             <div className="mt-8 rounded-2xl border border-accent-dim/40 bg-surface p-6">
               <p className="font-display text-2xl text-accent-soft lining-nums-price">
@@ -447,20 +424,25 @@ function FlowInner() {
                 )}
               </div>
 
-              <label className="mt-6 flex items-start gap-3 text-xs text-body-dim">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => { setConsent(e.target.checked); if (e.target.checked) logEvent("consent_checked", {}); }}
-                  className="mt-0.5 h-4 w-4 accent-rose-500"
-                  required
-                />
-                <span>
-                  Souhlasím s dodáním digitálního obsahu ihned po zaplacení a
-                  beru na vědomí, že tím ztrácím právo na odstoupení od smlouvy
-                  ve 14denní lhůtě.
-                </span>
-              </label>
+              {/* v1.5 §5.1: checkbox §1837 skrytý za SHOW_1837_CONSENT
+                  (default off, kód zůstává - rozhodnutí zakladatele
+                  6. 7. 2026, log v PR-POPIS.md) */}
+              {SHOW_1837_CONSENT && (
+                <label className="mt-6 flex items-start gap-3 text-xs text-body-dim">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => { setConsent(e.target.checked); if (e.target.checked) logEvent("consent_checked", {}); }}
+                    className="mt-0.5 h-4 w-4 accent-rose-500"
+                    required
+                  />
+                  <span>
+                    Souhlasím s dodáním digitálního obsahu ihned po zaplacení a
+                    beru na vědomí, že tím ztrácím právo na odstoupení od smlouvy
+                    ve 14denní lhůtě.
+                  </span>
+                </label>
+              )}
 
               <div className="mt-6 grid gap-3">
                 {creditsEnabled && credits > 0 ? (
@@ -501,7 +483,7 @@ function FlowInner() {
                   </>
                 )}
               </div>
-              {!consent && (
+              {SHOW_1837_CONSENT && !consent && (
                 <p className="mt-2 text-xs text-accent-soft">Nejdřív potvrď souhlas výše.</p>
               )}
 
@@ -596,7 +578,7 @@ function FlowInner() {
               window.history.replaceState(null, "", `/vyklad/${id}`);
             }}
             onDone={() => {
-              logEvent("reading_completed", { spread });
+              logEvent("reading_completed", { spread, type: readingType(spread) });
               // Serverový zůstatek po případném čerpání kreditu
               void fetchCredits();
               setStep("paths");
@@ -613,7 +595,7 @@ function FlowInner() {
 
         {step === "paths" && (
           <>
-            {readingId && <ReadingFeedback readingId={readingId} />}
+            {readingId && <ReadingFeedback readingId={readingId} spread={spread} />}
             <ThreePaths spread={spread} credits={credits} singlePurchases={singles} />
             {readingId && (
               <div className="mt-8 text-center">
@@ -632,9 +614,7 @@ function FlowInner() {
               </div>
             )}
             <p className="mt-10 border-t border-surface pt-6 text-center text-xs text-body-dim">
-              Tarot o Lásce je nástroj reflexe pro zábavu a sebepoznání.
-              Nenahrazuje profesionální terapii ani medicínskou péči. V krizi
-              kontaktuj Linku první psychické pomoci: 116 123.
+{DISCLAIMER}
             </p>
           </>
         )}

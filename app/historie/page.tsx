@@ -55,8 +55,8 @@ export default function HistoriePage() {
                 href={`/vyklad/${it.id}`}
                 className="block rounded-2xl border border-surface bg-surface p-5 transition hover:border-accent-dim"
               >
+                {/* v1.5 §5.3: jen otázka a datum, žádný typ výkladu */}
                 <p className="text-xs uppercase tracking-wider text-body-dim">
-                  {it.spreadName} ·{" "}
                   {new Date(it.createdAt).toLocaleDateString("cs-CZ")}
                 </p>
                 <p className="mt-1 font-medium text-body">

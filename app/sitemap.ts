@@ -16,7 +16,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/cenik",
     "/obchodni-podminky",
     "/ochrana-osobnich-udaju",
-    "/reklamace",
   ].map((p) => ({
     url: `${BASE}${p}`,
     changeFrequency: "weekly" as const,

@@ -108,7 +108,7 @@ const norm = (e: string) => e.trim().toLowerCase();
  * ověří ho KAŽDÁ instance. Formát: v1.<b64url(email)>.<expMs>.<podpis>.
  * V produkci s PostgreSQL se vrátí serverové sessions (schema.sql). */
 const SESSION_SECRET = process.env.SESSION_SECRET ?? "tol-mock-session-secret";
-const SESSION_TTL_MS = 30 * 86400 * 1000;
+const SESSION_TTL_MS = 90 * 86400 * 1000; // v1.5 §5.10: 90 dní
 const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");
 const unb64url = (s: string) => Buffer.from(s, "base64url").toString("utf8");
 const hmac = (s: string) =>

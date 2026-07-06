@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160">
+  <!-- Logo symbol (v1.5 §5.8): karta + soft-gold rám + srdce; tokens v3 -->
+  <rect width="120" height="160" rx="12" fill="#2B1340"/>
+  <rect x="6" y="6" width="108" height="148" rx="9" fill="none" stroke="#D4AF37" stroke-width="2.5"/>
+  <path d="M 60 103.76 C 40.2 87.92 33.6 76.04 37.56 66.8 C 41.52 57.56 53.4 56.24 60 66.8 C 66.6 56.24 78.48 57.56 82.44 66.8 C 86.4 76.04 79.8 87.92 60 103.76 Z" fill="#E84D9A" stroke="#D4AF37" stroke-width="1.6"/>
+</svg>

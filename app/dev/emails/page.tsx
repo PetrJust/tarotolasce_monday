@@ -57,17 +57,17 @@ const EMAILS: EmailTpl[] = [
     footer: FOOTER_TRANSACTIONAL,
   },
   {
+    // v1.5 §5.2: ranní e-mail = POZVÁNKA - neobsahuje kartu ani vzkaz,
+    // jen link na otočení (jméno karty se dozví až na webu)
     id: "daily-card",
     group: "Karta dne",
-    subject: "Tvoje dnešní karta: {karta}",
-    preheader: "Krátký vzkaz pro tvůj den.",
+    subject: "Tvoje karta dne na tebe čeká",
+    preheader: "Jedno klepnutí a víš, co ti dnes karty říkají.",
     body: [
-      "Dobré ráno,",
-      "dnešní karta pro tebe je {karta}.",
-      "{kratky_vyklad_karty_dne}",
-      "Jestli dnes nosíš v hlavě něco vlastního, karty jsou ti k dispozici.",
+      "Dobré ráno{jmeno_s_carkou},",
+      "tvoje dnešní karta je zamíchaná a čeká, až ji otočíš.",
     ],
-    cta: { label: "Otevřít kartu dne", href: "https://tarotolasce.cz/karta-dne" },
+    cta: { label: "Otočit dnešní kartu", href: "https://tarotolasce.cz/karta-dne" },
     footer: FOOTER_MARKETING,
   },
   // Sekvence A: po prvním zaplaceném výkladu
@@ -115,7 +115,7 @@ const EMAILS: EmailTpl[] = [
     id: "seq-b-d1",
     group: "Sekvence B (nedokončený výklad) · D+1",
     subject: "Tvoje karty jsou pořád připravené",
-    preheader: "Otázka i rozklad na tebe čekají.",
+    preheader: "Otázka i karty na tebe čekají.",
     body: [
       "Ahoj,",
       "včera ses ptala: „{otazka}“. K výkladu nakonec nedošlo, ale tvoje karty jsou pořád zamíchané a připravené.",

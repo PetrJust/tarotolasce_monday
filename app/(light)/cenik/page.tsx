@@ -2,6 +2,7 @@
 // SSR stránka, nákup balíčku řeší klientská komponenta níže.
 import type { Metadata } from "next";
 import BuyPack from "@/components/BuyPack";
+import ViewPricingPing from "@/components/ViewPricingPing";
 
 export const metadata: Metadata = {
   title: "Ceník: tarotové výklady od 29 Kč",
@@ -65,7 +66,7 @@ const TIERS = [
     name: "1 výklad",
     price: "49 Kč",
     note: "bez předplatného",
-    detail: "Jedna otázka, jeden rozklad, výklad uložený navždy.",
+    detail: "Jedna otázka, jeden výklad uložený navždy.",
     priceId: null,
     credits: 0,
   },
@@ -89,6 +90,8 @@ const TIERS = [
 
 export default function CenikPage() {
   return (
+    <>
+    <ViewPricingPing />
     <div className="py-10">
       <script
         type="application/ld+json"
@@ -122,5 +125,6 @@ export default function CenikPage() {
         Karta dne je vždy zdarma. Výklady generuje AI.
       </p>
     </div>
+    </>
   );
 }

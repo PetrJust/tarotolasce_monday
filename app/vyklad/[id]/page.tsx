@@ -4,6 +4,7 @@ import { getReading } from "@/lib/store";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import { PERSONA_NAME } from "@/lib/persona";
+import { DISCLAIMER } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,9 @@ export default async function SavedReadingPage({ params }: { params: { id: strin
 
   return (
     <article className="py-10">
+      {/* v1.5 §5.3: jen datum, žádný typ výkladu */}
       <p className="text-sm text-body-dim">
-        {new Date(reading.createdAt).toLocaleDateString("cs-CZ")} ·{" "}
-        {reading.spreadName}
+        {new Date(reading.createdAt).toLocaleDateString("cs-CZ")}
       </p>
       <h1 className="mt-2 font-display text-[40px] leading-[1.12] font-semibold text-body">
         „{reading.question}"
@@ -42,14 +43,12 @@ export default async function SavedReadingPage({ params }: { params: { id: strin
         {reading.text}
       </div>
 
-      <ReadingFeedback readingId={reading.id} />
+      <ReadingFeedback readingId={reading.id} spread={reading.spreadKey} />
 
       <ThreePaths spread={reading.spreadKey} credits={0} singlePurchases={0} />
 
       <p className="mt-10 border-t border-surface pt-6 text-center text-xs text-body-dim">
-        Tarot o Lásce je nástroj reflexe pro zábavu a sebepoznání. Nenahrazuje
-        profesionální terapii ani medicínskou péči. V krizi kontaktuj Linku
-        první psychické pomoci: 116 123.
+{DISCLAIMER}
       </p>
     </article>
   );

@@ -1,16 +1,17 @@
 "use client";
-import { logEvent } from "@/lib/analytics";
+import { logEvent, readingType } from "@/lib/analytics";
+import { PROMPT_VERSION, MODEL_VERSION } from "@/lib/version";
 // Hodnocení výkladu po jeho dočtení. Klidné, bez nátlaku, dá se přeskočit.
 // „Jak ti výklad sedl?" + palec nahoru/dolů + volitelný komentář.
 import { useState } from "react";
 
-export default function ReadingFeedback({ readingId }: { readingId: string }) {
+export default function ReadingFeedback({ readingId, spread }: { readingId: string; spread?: string }) {
   const [rating, setRating] = useState<"up" | "down" | null>(null);
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
 
   async function send(r: "up" | "down", withComment: boolean) {
-    logEvent("feedback_submitted", { rating: r, withComment });
+    logEvent("feedback_submitted", { rating: r, withComment, promptVersion: PROMPT_VERSION, modelVersion: MODEL_VERSION, type: spread ? readingType(spread) : undefined });
     setRating(r);
     await fetch("/api/feedback", {
       method: "POST",

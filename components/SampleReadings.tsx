@@ -5,20 +5,24 @@
 import { useState } from "react";
 
 type Sample = {
+  label: string; // štítek typu DOSLOVA dle v1.5 §5.4
   question: string;
   text: string;
 };
 
 const SAMPLES: Sample[] = [
   {
+    label: "3 karty",
     question: "Myslí na mě ještě?",
     text: "Dvojka pohárů říká, že mezi vámi něco zůstalo — ale odpověď není jen v tom, jestli se ozve. Důležité je i to, co ti to čekání bere.",
   },
   {
+    label: "1 karta · Ano/Ne",
     question: "Mám mu napsat?",
     text: "Spíš ne hned. Rytíř mečů radí nejdřív klid, ne další nejistotu.",
   },
   {
+    label: "6 karet",
     question: "Co mě na něm pořád drží?",
     text: "Kolo štěstí ukazuje: možná nečekáš na něj, ale na pocit, který jsi s ním kdysi měla.",
   },
@@ -42,7 +46,10 @@ export default function SampleReadings() {
             key={s.question}
             className="rounded-2xl border border-surface bg-surface p-5"
           >
-            <h3 className="font-display text-xl font-semibold text-body">
+            <p className="text-xs uppercase tracking-wider text-accent-soft">
+              {s.label}
+            </p>
+            <h3 className="mt-1 font-display text-xl font-semibold text-body">
               „{s.question}"
             </h3>
             {expanded ? (

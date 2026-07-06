@@ -124,18 +124,18 @@ function outOfScope(q: string): "zdraví" | "právo či finance" | null {
 }
 
 /* ---------- stavební bloky ---------- */
-function capital(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function intro(question: string, seed: number): string {
+function intro(question: string, seed: number, name = ""): string {
   const q = question.trim();
   const opts = [
     "Podívala jsem se na tvou otázku a karty k ní mluví překvapivě souvisle.",
     "Tvoje otázka má váhu a karty ji nepřecházejí mlčením.",
     "Sedla jsem si nad tvou otázku a tohle z karet vystupuje nejjasněji.",
   ];
-  return q ? pick(opts, seed, 1) : "Dnešní karta ti nese krátký vzkaz.";
+  const base = q ? pick(opts, seed, 1) : "Dnešní karta ti nese krátký vzkaz.";
+  // Jméno z profilu (v1.5 §5.6): oslovení jen když existuje - veškeré
+  // copy musí fungovat i bez jména (fallback bez oslovení).
+  const n = name.trim();
+  return n ? `${n}, ${base.charAt(0).toLowerCase()}${base.slice(1)}` : base;
 }
 
 /* ---------- vazba bloku na téma otázky (v1.1 H.4) ---------- */
@@ -164,10 +164,19 @@ function questionTie(question: string, seed: number, i: number): string {
 function cardBlock(card: PickedCard, seed: number, i: number, question = ""): string {
   const c = CARD_BY_ID[card.cardId];
   const name = `${c?.name ?? card.name}${card.reversed ? ", obráceně" : ""}`;
-  const lead = pick(["mluví o tom, že je tu", "ukazuje na", "připomíná ti"], seed, i + 2);
+  // GRAMATICKÁ SHODA (v1.5 §6.3): významy karet jsou směs jmenných frází
+  // („první plody i první trhliny") a celých vět („máš v rukou víc
+  // nástrojů…"). Dřívější uvození „mluví o tom, že je tu X" vyžadovalo
+  // jednotné číslo a rozbíjelo shodu („je tu první plody"). Dvojtečkové
+  // uvození je syntakticky bezpečné pro oba tvary.
+  const lead = pick(
+    ["Tahle karta říká:", "Tady karta ukazuje:", "Karta ti připomíná:"],
+    seed,
+    i + 2
+  );
   // 2-3 věty: karetní obraz + lidský překlad, druhá věta váže na otázku (H.4)
   const tie = question.trim() ? ` ${questionTie(question, seed, i)}` : "";
-  return `✦ ${name} · ${card.position}\n${capital(lead)} ${cardMeaning(card)}.${tie}`;
+  return `✦ ${name} · ${card.position}\n${lead} ${cardMeaning(card)}.${tie}`;
 }
 
 function synthesis(cards: PickedCard[], seed: number): string {
@@ -203,11 +212,18 @@ function yesNoReading(card: PickedCard, seed: number, question = ""): string {
     : "Ne jako slib, ale jako směr: okolnosti ti nahrávají víc, než si připouštíš.";
   const disclaimer =
     "A jedno upřímné připomenutí: karty neznají budoucnost a já ti ji slibovat nebudu. Ukazují, kde stojíš teď.";
+  // v1.5 §6.2: placená jednokarta má povinnou strukturu „jasný směr +
+  // proč (z karty) + co s tím / na co pozor" - výrazně bohatší než
+  // ranní vzkaz karty dne. Golden set to kontroluje.
+  const caution = card.reversed
+    ? "Na co si dát pozor: obrácená karta často znamená, že první impuls přichází z nejistoty, ne z jasnosti. Nerozhoduj v nejslabší chvíli dne."
+    : "Na co si dát pozor: i dobrá karta neplatí navždy. Směr drž, ale nech si prostor přehodnotit, kdyby se okolnosti změnily.";
   return [
     `Karty se teď kloní ${lean}. ${nuance}`,
     cardBlock(card, seed, 0, question),
     disclaimer,
     actionStep(seed),
+    caution,
     `Takže ještě jednou, ať to nezapadne: teď je to ${leanShort}.`,
     SIGNATURE,
   ].join("\n\n");
@@ -221,7 +237,8 @@ function matches(cards: PickedCard[], ids: string[]): boolean {
 export function mockReading(
   spread: SpreadKey,
   question: string,
-  cards: PickedCard[]
+  cards: PickedCard[],
+  name = ""
 ): string {
   // doslovné ukázky z 9.2 pro referenční kombinace (kvalitativní laťka)
   if (spread === "between_us" && matches(cards, ["dvojka-pohary", "rytir-pentakly", "slunce"]))
@@ -264,7 +281,7 @@ export function mockReading(
     return head + yesNoReading(cards[0], seed, question);
   }
 
-  if (!parts.length) parts.push(intro(question, seed));
+  if (!parts.length) parts.push(intro(question, seed, name));
   cards.forEach((c, i) => parts.push(cardBlock(c, seed, i, spread === "daily" ? "" : question)));
   if (spread !== "daily" && cards.length > 1) parts.push(synthesis(cards, seed));
   parts.push(actionStep(seed));
