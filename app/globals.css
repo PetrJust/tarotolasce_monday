@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  /* Design tokens v1.1 §C + v1.3 §1 (zdroj: lib/palette.ts). Jediná barva
+     textu je plum-900 (výjimka: bílý text na primárním CTA); odkazy
+     rose-700; akcent rose-500. Invariant 3 (v1.3): v aplikaci neexistuje
+     žádný gradient; primární CTA je plná plum-900 s bílým textem. */
+  --surface-1: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --surface-border: #F3D3E5;
+  --text-primary: #3B1D42;
+  --text-dim: rgba(59, 29, 66, 0.72);
+  --accent: #EC5CA8;
+  --accent-soft: #B81E76; /* textové odkazy = rose-700 */
+  --accent-dim: #F3B9D9;
+  --input-bg: #FFFFFF;
+  --input-text: #3B1D42;
+  --input-placeholder: rgba(59, 29, 66, 0.45);
+}
+
+body {
+  background: #FDF1F7; /* blush-50, plochá */
+  color: var(--text-primary);
+  min-height: 100dvh;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+::selection {
+  background: rgba(236, 92, 168, 0.35);
+}
+
+a { color: inherit; }
+
+/* Sémantické třídy - čtou tokens, jediné místo pravdy pro plochy/text. */
+.bg-surface { background: var(--surface-1); }
+.bg-surface-2 { background: var(--surface-2); }
+.border-surface { border-color: var(--surface-border); }
+.text-body { color: var(--text-primary); }
+.text-body-dim { color: var(--text-dim); }
+.text-accent { color: var(--accent); }
+.text-accent-soft { color: var(--accent-soft); }
+.border-accent { border-color: var(--accent); }
+.border-accent-dim { border-color: var(--accent-dim); }
+
+/* ===== Primární CTA (v1.3 §1) =====
+   Plná plum-900, bílý text, radius 20-24 px, váha 700, na mobilu
+   64-72 px vysoké, velmi decentní stín (žádný glow). Právě jedna na
+   obrazovku (mapa z v1.1 C). Disabled: šedo-švestková s bílým textem
+   (5.6:1 = AA). */
+.btn-primary {
+  background: #3B1D42; /* plum-900, jediný zdroj pravdy */
+  color: #FFFFFF;
+  border-radius: 22px;
+  font-weight: 700;
+  font-size: 17px;
+  min-height: 64px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  box-shadow: 0 2px 8px rgba(59, 29, 66, 0.18);
+  transition: opacity 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.92; }
+.btn-primary:disabled {
+  background: #6E5F72; /* plum se sníženou sytostí, AA s bílým textem */
+  box-shadow: none;
+  cursor: not-allowed;
+}
+@media (min-width: 640px) {
+  .btn-primary { min-height: 56px; font-size: 18px; }
+}
+
+textarea, input {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--surface-border);
+}
+textarea::placeholder, input::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* ===== Typografie v1.1 §D + v1.3 §2 =====
+   Nadpisy Lora (--font-display, nahrazuje Fraunces), vše ostatní Inter
+   (--font-sans). Logo --font-logo = jediná výjimka (rozhodne zakladatel).
+   H1 mobil 40-44px ř. 1.08-1.15, H2 30-34 ř. 1.15, tělo 17-18 ř. 1.5-1.65,
+   tlačítka 17-18/700 (v1.3 §2, sladěno s CTA spec). H1 se nesmí lámat uprostřed slova - text-wrap:
+   balance + clamp() smí zmenšit o stupeň, když se nevejde. */
+h1.font-display {
+  font-size: clamp(36px, 10.5vw, 44px) !important;
+  line-height: 1.1 !important;
+  font-weight: 600;
+  text-wrap: balance;
+  overflow-wrap: normal;
+}
+h2.font-display {
+  font-size: clamp(28px, 8vw, 34px) !important;
+  line-height: 1.15 !important;
+  font-weight: 600;
+}
+h3.font-display { font-weight: 600; }
+.font-display { font-weight: 600; }
+
+button { font-weight: 700; } /* v1.3 §2 */
+
+/* Číslice: ceny lining-nums (serif má skákavé), odpočty tabular-nums. */
+.lining-nums-price { font-variant-numeric: lining-nums; }
+.tabular-nums-count { font-variant-numeric: tabular-nums; }
+
+.prose-tarot p { margin-top: 1em; }
