@@ -39,6 +39,26 @@ export default function DevKreditPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Diagnostika env proměnných - řeší "nastavil jsem to, ale nefunguje to"
+  // bez dohadování nad Vercel dashboardem (v1.3 §5 hotfix).
+  type EnvDiag = {
+    vercelEnv: string | null;
+    isProd: boolean;
+    allowDevTools: boolean;
+    otpDevPreview: boolean;
+    hasTestOtpCode: boolean;
+    devLoginAvailable: boolean;
+  };
+  const [envDiag, setEnvDiag] = useState<EnvDiag | null>(null);
+  async function refreshEnvDiag() {
+    try {
+      const d = await fetch("/api/dev/env").then((r) => r.json());
+      setEnvDiag(d);
+    } catch {
+      setEnvDiag(null);
+    }
+  }
+
   function refreshLocal() {
     setOverride(getDevCreditsOverride());
     setSingles(getSinglePurchases());
@@ -60,6 +80,7 @@ export default function DevKreditPage() {
   useEffect(() => {
     refreshLocal();
     void refreshServer();
+    void refreshEnvDiag();
   }, []);
 
   // Rychlé přihlášení: request OTP -> devCode -> verify. Funguje jen s
@@ -73,20 +94,24 @@ export default function DevKreditPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       }).then((r) => r.json());
-      if (!req?.devCode) {
-        setMsg("Server nevrátil devCode (OTP_DEV_PREVIEW není zapnuté). Přihlas se přes /prihlaseni.");
+      // devCode (OTP_DEV_PREVIEW) i testCode (TEST_OTP_CODE) jsou platný
+      // kód pro tenhle e-mail - použij, co server poslal.
+      const code = req?.devCode ?? req?.testCode;
+      if (!code) {
+        setMsg("Server nevrátil žádný kód (viz diagnostika prostředí výš). Přihlas se přes /prihlaseni.");
         return;
       }
       const ver = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: req.devCode }),
+        body: JSON.stringify({ email, code }),
       });
       setMsg(ver.ok ? `Přihlášeno jako ${email}.` : "Ověření kódu selhalo.");
       if (ver.ok) announceSessionChange();
       await refreshServer();
     } finally {
       setBusy(false);
+      void refreshEnvDiag();
     }
   }
 
@@ -132,6 +157,53 @@ export default function DevKreditPage() {
         přihlásíš se, koupíš balíček přes API a zůstatek čteš stejně jako
         aplikace. Přepínač viditelnosti balíčků platí jen ve tvém prohlížeči.
       </p>
+
+      {/* Diagnostika env proměnných - co server PRÁVĚ TEĎ vidí */}
+      <div className="mt-6 rounded-2xl border border-accent-dim bg-surface p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wider text-body-dim">
+            Diagnostika prostředí (co server právě vidí)
+          </p>
+          <button
+            onClick={refreshEnvDiag}
+            className="text-xs text-accent-soft underline underline-offset-2 hover:text-accent"
+          >
+            Obnovit
+          </button>
+        </div>
+        {envDiag ? (
+          <>
+            <ul className="mt-2 space-y-1 text-sm text-body">
+              <li>
+                VERCEL_ENV: <strong>{envDiag.vercelEnv ?? "(nenastaveno - běžíš lokálně)"}</strong>
+              </li>
+              <li>
+                ALLOW_DEV_TOOLS=1: <strong>{envDiag.allowDevTools ? "ano" : "ne"}</strong>
+              </li>
+              <li>
+                OTP_DEV_PREVIEW=1: <strong>{envDiag.otpDevPreview ? "ano" : "ne"}</strong>
+              </li>
+              <li>
+                TEST_OTP_CODE nastaven: <strong>{envDiag.hasTestOtpCode ? "ano" : "ne"}</strong>
+              </li>
+            </ul>
+            <p className="mt-3 text-sm font-medium">
+              {envDiag.devLoginAvailable ? (
+                <span className="text-body">✓ Rychlé přihlášení by mělo fungovat.</span>
+              ) : (
+                <span className="text-accent-soft">
+                  ✗ Rychlé přihlášení NEBUDE fungovat -{" "}
+                  {!envDiag.otpDevPreview && !envDiag.hasTestOtpCode
+                    ? "server nevidí ani OTP_DEV_PREVIEW=1, ani TEST_OTP_CODE (zkontroluj přesný název/hodnotu proměnných ve Vercelu a udělej Redeploy)."
+                    : "podmínka isProd/allowDevTools není splněná (zkontroluj ALLOW_DEV_TOOLS=1 a udělej Redeploy)."}
+                </span>
+              )}
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-body-dim">Načítám…</p>
+        )}
+      </div>
 
       <div className="mt-8 rounded-2xl border border-surface bg-surface p-6">
         <p className="text-xs uppercase tracking-wider text-body-dim">Viditelnost balíčků</p>
