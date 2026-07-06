@@ -5,7 +5,10 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { mockReading } from "@/lib/mockReadings";
 import { saveReading } from "@/lib/store";
-import { consumeCredit, sessionUser } from "@/lib/account";
+import { sessionUser } from "@/lib/account";
+import {
+  LEDGER_COOKIE, parseLedger, ledgerConsume, ledgerSetCookieHeader,
+} from "@/lib/cookieLedger";
 import { sendPurchaseEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
 import { SPREADS, SpreadKey } from "@/lib/spreads";
@@ -21,11 +24,16 @@ async function handlePOST(req: NextRequest) {
 
   // Čerpání z balíčku: rozhoduje SERVER podle ledgeru, ne frontend (A.2).
   // Idempotentní na sessionId - obnovení stránky nestrhne kredit dvakrát.
+  // MOCK: ledger v podepsané cookie (lib/cookieLedger.ts) - nová hodnota
+  // se posílá Set-Cookie hlavičkou na streamované odpovědi níže.
+  let ledgerCookieHeader: string | null = null;
   if (useCredit) {
     const u = await sessionUser(cookies().get("tol_session")?.value);
     if (!u) return new Response("login required", { status: 401 });
-    const c = await consumeCredit(u.userId, String(sessionId));
+    const ledger = parseLedger(cookies().get(LEDGER_COOKIE)?.value, u.email);
+    const c = ledgerConsume(ledger, String(sessionId));
     if (!c.ok) return new Response("insufficient credit", { status: 402 });
+    ledgerCookieHeader = ledgerSetCookieHeader(c.ledger);
   }
 
   const text = mockReading(spread as SpreadKey, question ?? "", cards);
@@ -67,13 +75,13 @@ async function handlePOST(req: NextRequest) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  };
+  if (ledgerCookieHeader) headers["Set-Cookie"] = ledgerCookieHeader;
+  return new Response(stream, { headers });
 }
 
 export const POST = withApiGuard(handlePOST);

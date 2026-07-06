@@ -113,6 +113,21 @@ function FlowInner() {
     if (saved) {
       setEmail(saved);
       setEmailConfirmed(true);
+    } else {
+      // Hotfix: po přihlášení kódem (OTP) zná e-mail server (session),
+      // ale klientská cookie chybí - flow pak přihlášené uživatelce
+      // s kredity zbytečně ukazoval checkout a chtěl e-mail znovu.
+      // Session e-mail převezmeme jako známý.
+      fetch("/api/auth/session")
+        .then((r) => r.json())
+        .then((s) => {
+          if (s?.email) {
+            persistEmail(s.email);
+            setEmail(s.email);
+            setEmailConfirmed(true);
+          }
+        })
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -148,13 +163,26 @@ function FlowInner() {
       body: JSON.stringify({ question: trimmed }),
     }).then((r) => r.json());
     setSpread(cls.spread);
-    // Má kredit z balíčku → bez platby. Pokud už známe e-mail, jdeme rovnou
-    // do rituálu; jinak zobrazíme odlehčený checkout jen pro e-mail a souhlas
+    // Má kredit z balíčku → bez platby. Pokud už známe e-mail (klientská
+    // cookie NEBO přihlášená session - hotfix), jdeme rovnou do rituálu;
+    // jinak zobrazíme odlehčený checkout jen pro e-mail a souhlas
     // (bez platebních tlačítek). Kredit se strhne až při vydání výkladu (7.5),
     // zůstatek rozhoduje server (účet přes session).
-    if (creditsEnabled && getEmail() && (await fetchCredits()) > 0) {
-      await startRitual(cls.spread);
-      return;
+    if (creditsEnabled && (await fetchCredits()) > 0) {
+      let known = getEmail();
+      if (!known) {
+        const s = await fetch("/api/auth/session").then((r) => r.json()).catch(() => null);
+        if (s?.email) {
+          persistEmail(s.email);
+          setEmail(s.email);
+          setEmailConfirmed(true);
+          known = s.email;
+        }
+      }
+      if (known) {
+        await startRitual(cls.spread);
+        return;
+      }
     }
     setStep("checkout");
   }

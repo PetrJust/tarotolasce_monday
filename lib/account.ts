@@ -99,6 +99,50 @@ const id = () => crypto.randomBytes(12).toString("hex");
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 const norm = (e: string) => e.trim().toLowerCase();
 
+/* ---------------- bezstavové sessions (hotfix serverless) ----------------
+ * PŮVODNÍ PROBLÉM: session tokeny ležely v souboru v /tmp. Vercel ale
+ * obsluhuje každý požadavek potenciálně JINOU instancí funkce s vlastním
+ * /tmp -> jeden požadavek uživatelku viděl přihlášenou a druhý ne
+ * (split-brain: badge s kredity + zároveň „Ještě nejsi přihlášená").
+ * ŘEŠENÍ: token nese e-mail v sobě a je podepsaný HMAC - žádné úložiště,
+ * ověří ho KAŽDÁ instance. Formát: v1.<b64url(email)>.<expMs>.<podpis>.
+ * V produkci s PostgreSQL se vrátí serverové sessions (schema.sql). */
+const SESSION_SECRET = process.env.SESSION_SECRET ?? "tol-mock-session-secret";
+const SESSION_TTL_MS = 30 * 86400 * 1000;
+const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");
+const unb64url = (s: string) => Buffer.from(s, "base64url").toString("utf8");
+const hmac = (s: string) =>
+  crypto.createHmac("sha256", SESSION_SECRET).update(s).digest("base64url");
+
+export function signSessionToken(email: string): string {
+  const em = norm(email);
+  const exp = Date.now() + SESSION_TTL_MS;
+  const payload = `${b64url(em)}.${exp}`;
+  return `v1.${payload}.${hmac(payload)}`;
+}
+
+export function parseSessionToken(token: string): { email: string } | null {
+  const parts = token.split(".");
+  if (parts.length !== 4 || parts[0] !== "v1") return null;
+  const payload = `${parts[1]}.${parts[2]}`;
+  const sig = parts[3];
+  const expected = hmac(payload);
+  if (
+    sig.length !== expected.length ||
+    !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+  ) {
+    return null;
+  }
+  const exp = Number(parts[2]);
+  if (!Number.isFinite(exp) || Date.now() > exp) return null;
+  try {
+    const email = unb64url(parts[1]);
+    return email.includes("@") ? { email: norm(email) } : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------- users ---------------- */
 export function getOrCreateUser(db: Db, email: string): User {
   const em = norm(email);
@@ -250,15 +294,21 @@ export async function verifyOtp(email: string, purpose: string, code: string, cr
     u.emailVerifiedAt = u.emailVerifiedAt ?? Date.now(); // = ověření, žádný extra krok
     if (purpose === "daily_card_optin") u.dailyOptInAt = Date.now();
     if (!createSession) return { ok: true as const };
-    const token = crypto.randomBytes(24).toString("hex");
-    db.sessions.push({ token, userId: u.id, createdAt: Date.now() });
-    return { ok: true as const, sessionToken: token };
+    // Bezstavový podepsaný token (viz komentář u signSessionToken)
+    return { ok: true as const, sessionToken: signSessionToken(u.email) };
   });
 }
 
 /* ---------------- sessions ---------------- */
 export async function sessionUser(token: string | undefined | null) {
   if (!token) return null;
+  // 1) bezstavový podepsaný token (funguje napříč serverless instancemi)
+  const stateless = parseSessionToken(token);
+  if (stateless) {
+    // userId deterministicky z e-mailu - ledger/refs drží konzistenci
+    return { userId: sha(stateless.email).slice(0, 24), email: stateless.email };
+  }
+  // 2) legacy tokeny ze souborového úložiště (lokální vývoj před hotfixem)
   return tx((db) => {
     const s = db.sessions.find((x) => x.token === token);
     if (!s) return null;
@@ -268,6 +318,8 @@ export async function sessionUser(token: string | undefined | null) {
 }
 export async function destroySession(token: string | undefined | null) {
   if (!token) return;
+  // Bezstavový token se „ničí" smazáním cookie (dělá route); tady jen
+  // úklid případného legacy záznamu v souboru.
   return tx((db) => {
     db.sessions = db.sessions.filter((s) => s.token !== token);
   });

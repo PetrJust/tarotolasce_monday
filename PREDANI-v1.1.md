@@ -274,3 +274,30 @@ rm -rf .data && zip -rq /mnt/user-data/outputs/tarotolasce-root.zip . \
 - `grep -c` s 0 shodami vrací exit 1 — není to chyba.
 - Krizové obrazovky (`CrisisScreen`) a Footer se NIKDY nerestylují do
   světla — vlastní night/cream, mimo scope (K).
+
+---
+
+# HOTFIX session 4: serverless split-brain (mock úložiště)
+
+**Symptom na Vercelu:** náhodně nefungující přihlášení, TEST_OTP_CODE
+„nesedí", koupené kredity mizí, badge ukazuje kredity a profil zároveň
+„Ještě nejsi přihlášená".
+
+**Příčina:** mock stav (sessions, OTP, ledger) ležel v souboru v /tmp;
+každý požadavek může obsloužit JINÁ serverless instance s vlastním /tmp.
+
+**Řešení (mock, produkci nahradí PostgreSQL dle schema.sql):**
+- Sessions: bezstavový podepsaný token (HMAC, lib/account.ts:
+  signSessionToken/parseSessionToken) - ověří ho každá instance.
+  SESSION_SECRET env volitelný (fallback konstanta pro mock).
+- TEST_OTP_CODE: verify route ho ověřuje bez úložiště (stateless bypass).
+- Kredity: podepsaná httpOnly cookie tol_ledger (lib/cookieLedger.ts) -
+  zůstatek/refy/introUsed cestují s prohlížečem. Zachované invarianty:
+  idempotence nákupu (paymentIntentId) i čerpání (sessionId), odmítnutí
+  při 0, intro jednou. Vědomé limity mocku: kredit vázaný na
+  prohlížeč+e-mail (ne napříč zařízeními), smazání cookies = smazání
+  zůstatku. lib/account + testy A.1-A.6 zůstávají referencí pro produkci.
+- vyklad/novy přebírá e-mail z přihlášené session (dřív po OTP loginu
+  neznal e-mail a nutil checkout i s kredity).
+- ZBÝVAJÍCÍ ZNÁMÝ LIMIT: uložené výklady (lib/store) jsou dál v /tmp -
+  historie/trvalé odkazy můžou mezi instancemi „mizet". Řeší až DB.
