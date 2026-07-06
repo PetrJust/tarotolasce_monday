@@ -9,10 +9,11 @@ import { consumeCredit, sessionUser } from "@/lib/account";
 import { sendPurchaseEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
 import { SPREADS, SpreadKey } from "@/lib/spreads";
+import { withApiGuard } from "@/lib/apiGuard";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { sessionId, question, cards, spread, useCredit } = await req.json();
   if (!sessionId || !Array.isArray(cards) || !spread || !(spread in SPREADS)) {
     return new Response("bad request", { status: 400 });
@@ -74,3 +75,5 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+export const POST = withApiGuard(handlePOST);

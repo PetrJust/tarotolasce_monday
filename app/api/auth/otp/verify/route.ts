@@ -4,8 +4,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyOtp } from "@/lib/account";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const { email, code, purpose } = await req.json().catch(() => ({}));
   if (typeof email !== "string" || typeof code !== "string") {
     return NextResponse.json({ ok: false, error: "invalid" }, { status: 400 });
@@ -22,3 +23,5 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiGuard(handlePOST);

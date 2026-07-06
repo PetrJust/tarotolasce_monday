@@ -4,6 +4,7 @@
 // jen funkce deliver() za SES. Jednotný odesílatel, transakční e-maily
 // bez marketingového obsahu.
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { EMAIL_SENDER, PERSONA_NAME } from "./persona";
 import { OPERATOR } from "./site";
@@ -23,7 +24,7 @@ async function deliver(mail: Mail) {
   // MOCK: log + outbox pro /dev/emails
   console.log(`[email] to=${mail.to} subject=${mail.subject}`);
   try {
-    const dir = process.env.TOL_DATA_DIR ?? path.join(process.cwd(), ".data");
+    const dir = process.env.TOL_DATA_DIR ?? path.join(os.tmpdir(), "tarotolasce-data");
     const f = path.join(dir, "outbox.json");
     fs.mkdirSync(dir, { recursive: true });
     let arr: Mail[] = [];

@@ -3,10 +3,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sessionUser, getBalanceByEmail } from "@/lib/account";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET() {
+async function handleGET() {
   const u = await sessionUser(cookies().get("tol_session")?.value);
   if (!u) return NextResponse.json({ balance: 0, loggedIn: false });
   const balance = await getBalanceByEmail(u.email);
   return NextResponse.json({ balance, loggedIn: true });
 }
+
+export const GET = withApiGuard(handleGET);

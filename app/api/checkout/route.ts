@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { creditPurchase, sessionUser, tryUseIntro } from "@/lib/account";
 import { sendPurchaseEmail } from "@/lib/email";
 import { PRICES } from "@/lib/pricing";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const PRODUCTS: Record<string, { kind: "intro" | "single" | "pack"; credits?: number; price: number }> = {
   price_first_29: { kind: "intro", price: PRICES.first },
@@ -16,7 +17,7 @@ const PRODUCTS: Record<string, { kind: "intro" | "single" | "pack"; credits?: nu
   price_pack20_599: { kind: "pack", credits: 20, price: PRICES.pack20 },
 };
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const { email, priceId } = await req.json().catch(() => ({}));
   if (typeof priceId !== "string" || !(priceId in PRODUCTS)) {
     return NextResponse.json({ error: "unknown product" }, { status: 400 });
@@ -59,3 +60,5 @@ export async function POST(req: Request) {
   void sendPurchaseEmail; // (odesílá se po vzniku výkladu, ne tady)
   return NextResponse.json({ paymentIntent, price: product.price });
 }
+
+export const POST = withApiGuard(handlePOST);

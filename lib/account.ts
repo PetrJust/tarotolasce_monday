@@ -11,9 +11,23 @@
 //    na adresu a 15/hod na IP, identická odpověď pro ne/existující e-mail
 import crypto from "crypto";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
-const DATA_DIR = process.env.TOL_DATA_DIR ?? path.join(process.cwd(), ".data");
+// HOTFIX: Vercel serverless funkce mají souborový systém JEN PRO ČTENÍ
+// kromě /tmp. Původní výchozí cesta (process.cwd()/.data) tam byla
+// nezapisovatelná -> každý zápis (přihlášení, OTP, kredit) shodil funkci
+// s neošetřenou chybou a prohlížeč viděl prázdnou 500 odpověď.
+// os.tmpdir() se na Vercelu resolvuje na /tmp (zapisovatelné), lokálně na
+// běžný systémový temp adresář (taky zapisovatelný) - funguje všude bez
+// nutnosti cokoli nastavovat. TOL_DATA_DIR pořád jde přebít explicitně
+// (např. v testech), přednost má vždycky ta proměnná.
+//
+// POZOR: /tmp na serverless funkcích je EFEMÉRNÍ - při "studeném startu"
+// (nová instance funkce) se vynuluje. Pro testování OTP/nákupu v jedné
+// souvislé session to stačí, ale žádná data se takhle trvale neuchovají.
+// Skutečná perzistence = migrace na PostgreSQL (schema.sql, v1.1 §I/TODO C).
+const DATA_DIR = process.env.TOL_DATA_DIR ?? path.join(os.tmpdir(), "tarotolasce-data");
 const FILE = path.join(DATA_DIR, "account.json");
 
 type User = {

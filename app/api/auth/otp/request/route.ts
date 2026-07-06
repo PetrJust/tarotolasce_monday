@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { requestOtp, overrideOtpCode } from "@/lib/account";
 import { sendOtpEmail } from "@/lib/email";
+import { withApiGuard } from "@/lib/apiGuard";
 
 const IS_PROD = process.env.VERCEL_ENV === "production";
 // Stejný přepínač jako v app/dev/layout.tsx: na produkci normálně nic
@@ -16,7 +17,7 @@ const IS_PROD = process.env.VERCEL_ENV === "production";
 const DEV_UNLOCKED = process.env.ALLOW_DEV_TOOLS === "1";
 const ALLOW_TEST_MODE = !IS_PROD || DEV_UNLOCKED;
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const { email, purpose } = await req.json().catch(() => ({}));
   if (typeof email !== "string" || !email.includes("@")) {
     return NextResponse.json({ ok: true }); // žádný únik informace
@@ -38,3 +39,5 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: true });
 }
+
+export const POST = withApiGuard(handlePOST);
