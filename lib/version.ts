@@ -2,12 +2,12 @@
 // ZVEDNI PŘI KAŽDÉM PŘEDÁNÍ ZIPU: číslo + datum + jednořádkový popis.
 // Git commit doplňuje Vercel automaticky (VERCEL_GIT_COMMIT_SHA přes
 // /api/dev/env), tohle je lidsky čitelná řada nezávislá na gitu.
-export const APP_VERSION = "v1.5.2";
+export const APP_VERSION = "v1.6.0";
 export const APP_VERSION_DATE = "2026-07-06";
 export const APP_VERSION_NOTE =
-  "v1.5 + vějíř fix v3: střed kola kotvený CSS left:50% (nezávislý na měření)";
+  "Zadání v1.6: Flow B (teaser+fólie+navázání), srdcový rub, karta dne bez rituálu, nové copy";
 
 // Verzování enginu pro analytiku (v1.5 §7: feedback_submitted nese
 // prompt/model verzi; dashboard sleduje kvalitu per verze).
-export const PROMPT_VERSION = "mock-g-2"; // dikce G, gramaticky bezpečné uvození
+export const PROMPT_VERSION = "mock-flowb-1"; // dikce G, gramaticky bezpečné uvození
 export const MODEL_VERSION = "mock-1"; // MOCK engine; v produkci ID modelu

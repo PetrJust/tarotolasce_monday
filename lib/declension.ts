@@ -16,3 +16,10 @@ export function pocetVykladu(n: number): string {
   if (n >= 2 && n <= 4) return `${n} výklady`;
   return `${n} výkladů`;
 }
+
+// v1.6 §7.8: „vybereš [1 kartu / 3 karty / 6 karet]" + „Vyber ještě [X] kartu/karty"
+export function kartyAkuzativ(n: number): string {
+  if (n === 1) return "1 kartu";
+  if (n >= 2 && n <= 4) return `${n} karty`;
+  return `${n} karet`;
+}

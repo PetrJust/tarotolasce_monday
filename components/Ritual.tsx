@@ -10,7 +10,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CardBack, CardFace } from "./TarotCard";
 import { CARD_BY_ID } from "@/lib/cards";
 import { useShuffleSound } from "./useShuffleSound";
-import { vyberKaret } from "@/lib/declension";
+import { kartyAkuzativ } from "@/lib/declension";
 
 export type PickedCard = {
   cardId: string;
@@ -259,7 +259,7 @@ export default function Ritual({
     }
   }
 
-  // Krok zpět: vrátí drženou kartu zpět do vějíře (až do "Otočit karty").
+  // Krok zpět: vrátí drženou kartu zpět do vějíře (až do „Zobrazit výklad").
   // Uvolní výběr i na serveru, aby počet i pořadí zůstaly konzistentní.
   function unpick(index: number) {
     if (phase !== "picking") return;
@@ -326,11 +326,13 @@ export default function Ritual({
       <div className={phase === "picking" ? "flex-none" : "flex-1"}>
         {phase === "intro" && (
           <div className="flex h-full flex-col items-center justify-center gap-8 py-16 text-center">
-            {/* v1.3 §3.8: intro copy DOSLOVA. Bez jména (pravidlo
-                frekvence); věta o klidu se sem stěhuje z hero. */}
+            {/* v1.6 §7.7 DOSLOVA (jen placený výklad) */}
             <p className="mx-auto max-w-md font-display text-3xl font-semibold leading-snug text-body">
-              Na chvíli se zastav. Zůstaň u své otázky. Klidně, beze spěchu —
-              až budeš připravená, zamícháme karty.
+              Na chvíli se zastav.
+            </p>
+            <p className="mx-auto max-w-md text-body-dim">
+              Zůstaň u své otázky. Až budeš připravená, nech Nomi zamíchat
+              karty.
             </p>
             <button
               onClick={() => doShuffle(true)}
@@ -344,7 +346,7 @@ export default function Ritual({
               aria-pressed={soundOn}
               className="text-xs text-body-dim/80 hover:text-body"
             >
-              Zvuk šustění: {soundOn ? "zapnutý" : "vypnutý"}
+              Zvuk karet: {soundOn ? "zapnutý" : "vypnutý"}
             </button>
           </div>
         )}
@@ -375,14 +377,20 @@ export default function Ritual({
           <div className="py-4">
             {phase === "picking" && (
               <div className="mb-4 text-center">
+                {/* v1.6 §7.8 DOSLOVA */}
                 <p className="font-display text-2xl font-semibold text-body">
-                  {vyberKaret(cardCount)}
+                  Vyber karty
+                </p>
+                <p className="mt-1 text-sm text-body-dim">
+                  Pro tenhle výklad vybereš {kartyAkuzativ(cardCount)}.
                 </p>
                 <p className="mt-1 text-sm text-body-dim">
                   Nehledej správnou. Vyber ty, které tě přitáhnou.
                 </p>
                 <p className="mt-1 text-sm text-body-dim" aria-live="polite">
-                  {held.length} z {cardCount} vybráno
+                  {held.length < cardCount
+                    ? `Vyber ještě ${kartyAkuzativ(cardCount - held.length)}.`
+                    : ""}
                 </p>
               </div>
             )}

@@ -12,14 +12,12 @@ import { vykladu } from "@/lib/declension";
 export default function BuyPack({
   priceId,
   credits,
-  primary = false,
-}: {
+  primary = false, ctaLabel }: {
   priceId: string | null;
   credits: number;
   /** Právě jedna primární akce na obrazovku (invariant 3): na ceníku je
    * to vstupní karta „První výklad", ostatní tlačítka jsou sekundární. */
-  primary?: boolean;
-}) {
+  primary?: boolean; ctaLabel?: string }) {
   const { email, loading } = useSession();
   const router = useRouter();
   const [state, setState] = useState<"idle" | "paying" | "done" | "failed">("idle");
@@ -76,7 +74,7 @@ export default function BuyPack({
         {state === "paying"
           ? "Zpracovává se…"
           : email
-          ? "Koupit balíček"
+          ? (ctaLabel ?? "Koupit balíček")
           : "Přihlásit se a koupit"}
       </button>
       {state === "done" && (

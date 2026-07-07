@@ -13,6 +13,7 @@ async function handleGET() {
     id: r.id,
     question: r.question,
     spreadName: r.spreadName,
+    cardCount: Array.isArray(r.cards) ? r.cards.length : 0,
     createdAt: r.createdAt,
   }));
   return NextResponse.json({ readings: list, loggedIn: true });

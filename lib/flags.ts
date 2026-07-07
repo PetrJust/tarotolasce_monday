@@ -49,3 +49,8 @@ export const CREDITS_ENV_DEFAULT = ENV_DEFAULT;
 // právo na odstoupení 14 dní trvá. Zapnutí: NEXT_PUBLIC_SHOW_1837_CONSENT=1.
 export const SHOW_1837_CONSENT =
   process.env.NEXT_PUBLIC_SHOW_1837_CONSENT === "1";
+
+// v1.6 §5.5: staré flow (platba PŘED rituálem) zůstává za flagem;
+// default OFF = jede Flow B (teaser -> fólie -> platba -> navázání).
+// Návrat ke klasice = NEXT_PUBLIC_FLOW_CLASSIC=1 (minuta).
+export const FLOW_CLASSIC = process.env.NEXT_PUBLIC_FLOW_CLASSIC === "1";

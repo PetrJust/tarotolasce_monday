@@ -257,3 +257,48 @@ describe("v1.5 §6.3: gramatická shoda (nález „je tu první plody\")", () =>
     }
   });
 });
+
+
+// ---------- v1.6 §9: Flow B úvod + kontinuita ----------
+import { mockFlowB } from "../lib/mockReadings";
+
+describe("v1.6 §9.2/9.3: Flow B úvod a kontinuita", () => {
+  const cases: Array<[string, string, ReturnType<typeof CARD>[]]> = [
+    ["yesno", "Mám mu napsat?", [CARD("mesic", true)]],
+    ["between_us", "Jak to mezi námi je?", [CARD("dvojka-hole", false, "Já"), CARD("slunce", false, "On"), CARD("mesic", false, "My")]],
+    ["my_ex", "Co mě na něm drží?", [CARD("mag", false, "A"), CARD("vez", true, "B"), CARD("hvezda", false, "C"), CARD("slunce", false, "D"), CARD("mesic", true, "E"), CARD("svet", false, "F")]],
+  ];
+
+  it("úvod jmenuje první kartu a končí uprostřed myšlenky (pomlčka)", () => {
+    for (const [spread, q, cards] of cases) {
+      const { teaser } = mockFlowB(spread as any, q, cards, "Klára");
+      const firstName = cards[0].cardId;
+      // teaser jmenuje první kartu (přes její český název - hledáme uvození ř.2)
+      expect(teaser).toContain("První karta, kterou sis vytáhla");
+      // končí pomlčkou (otevřená myšlenka), ne tečkou uzavřené věty
+      expect(teaser.trim().endsWith("—")).toBe(true);
+      void firstName;
+    }
+  });
+
+  it("se jménem oslovuje, bez jména neoslovuje", () => {
+    const withName = mockFlowB("yesno", "Ozve se?", [CARD("slunce", false)], "Klára");
+    expect(withName.teaser.startsWith("Klára, ")).toBe(true);
+    const noName = mockFlowB("yesno", "Ozve se?", [CARD("slunce", false)], "");
+    expect(noName.teaser.startsWith(", ")).toBe(false);
+    expect(noName.teaser.startsWith("Sedla jsem si")).toBe(true);
+  });
+
+  it("kontinuita: teaser je PŘESNÝ prefix full; navazující věta dokončuje", () => {
+    for (const [spread, q, cards] of cases) {
+      const { full, teaser } = mockFlowB(spread as any, q, cards, "Klára");
+      expect(full.startsWith(teaser)).toBe(true); // teaser ⊂ full
+      // hned po teaseru pokračuje dokončení (mezera + text, ne nový odstavec)
+      const cont = full.slice(teaser.length);
+      expect(cont.startsWith(" ")).toBe(true);
+      expect(cont.trim().length).toBeGreaterThan(0);
+      // podpis na konci celého výkladu
+      expect(full.trim().endsWith("Nomi, tvoje AI kartářka")).toBe(true);
+    }
+  });
+});

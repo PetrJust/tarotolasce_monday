@@ -28,6 +28,20 @@ export default function KartaDnePage() {
   const [text, setText] = useState("");
   const startedRef = useRef(false);
 
+  const inviteLogged = useRef(false);
+  useEffect(() => {
+    // v1.6 §6/§11: proklik ranní pozvánky (metrika smyčky). Čteme přímo
+    // z URL (ne useSearchParams - ta by tu vyžadovala Suspense boundary).
+    if (
+      !inviteLogged.current &&
+      new URLSearchParams(window.location.search).get("from") === "invite"
+    ) {
+      inviteLogged.current = true;
+      logEvent("daily_invite_click", {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const last = getCookie("tol_daily");
     if (last === todayKey()) {
@@ -258,7 +272,11 @@ export default function KartaDnePage() {
           načtení (CSS shake na rubu). Jeden dotek = otočeno. */}
       {(phase === "loading" || phase === "ready") && (
         <div className="mt-8 text-center">
-          <p className="font-display text-2xl font-semibold text-body">
+          {/* v1.6 §6 DOSLOVA (před otočením) */}
+          <p className="text-body-dim">
+            Karta dne — Jedna karta a krátký vzkaz pro dnešní den.
+          </p>
+          <p className="mt-3 font-display text-2xl font-semibold text-body">
             Klepni a otoč.
           </p>
           <button
@@ -274,16 +292,16 @@ export default function KartaDnePage() {
 
       {phase === "already" && (
         <div className="mt-6 rounded-2xl border border-surface bg-surface p-6">
-          <p className="text-body">Dnešní kartu už sis vytáhla.</p>
-          <p className="mt-2 text-sm text-body-dim">
-            Nová na tebe čeká zítra ráno. Jestli tě mezitím něco pálí, můžeš se
-            zeptat na vlastní otázku.
+          {/* v1.6 §6 DOSLOVA (už tažená) */}
+          <p className="text-body">
+            Dnešní kartu už máš. Další si můžeš vytáhnout zase zítra. A pokud
+            se chceš zeptat na něco konkrétního, polož Nomi vlastní otázku.
           </p>
           <Link
             href="/vyklad/novy"
             className="mt-5 inline-block rounded-xl border border-accent-dim px-6 py-3 text-accent-soft hover:border-accent"
           >
-            Chceš se zeptat na něco svého?
+            Položit vlastní otázku
           </Link>
         </div>
       )}
@@ -291,7 +309,8 @@ export default function KartaDnePage() {
       {(phase === "reading" || phase === "done") && card && (
         <div className="mt-6">
           <div className="mx-auto max-w-40 text-center">
-            <span className="text-xs text-accent-soft">Dnešní karta</span>
+            {/* v1.6 §6 DOSLOVA (po otočení) */}
+            <span className="text-xs text-accent-soft">Tvoje karta dne</span>
             <div className="mt-1 rounded-xl border border-surface bg-cream/95 p-4 text-plum-900">
               <span className="block text-4xl">{card.symbol ?? "✦"}</span>
               <span className="mt-1 block text-sm font-medium">
@@ -301,6 +320,9 @@ export default function KartaDnePage() {
             </div>
           </div>
 
+          <p className="mt-6 text-center text-xs uppercase tracking-wider text-body-dim">
+            Vzkaz pro dnešek
+          </p>
           <ReadingStream
             sessionId={sessionId}
             question=""
@@ -321,11 +343,12 @@ export default function KartaDnePage() {
                 Sdílet na Stories
               </button>
               <div>
-                <Link
-                  href="/vyklad/novy"
-                  className="text-accent-soft underline underline-offset-4 hover:text-accent"
-                >
-                  Chceš se zeptat na něco svého?
+                <p className="text-sm text-body-dim">
+                  Chceš se zeptat na něco konkrétního? Polož vlastní otázku a
+                  Nomi ti vyloží karty.
+                </p>
+                <Link href="/vyklad/novy" className="btn-primary mt-3">
+                  Položit vlastní otázku
                 </Link>
               </div>
 

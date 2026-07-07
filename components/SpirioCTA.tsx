@@ -1,14 +1,23 @@
 "use client";
-// 7.6 SPIRIO CTA. UTM: utm_source=tarotolasce&utm_medium=referral
-// &utm_content={spread}_{umisteni}
+// SPIRIO CTA (v1.6 §8). Všechny odkazy na landing spirio.cz.
+// UTM: utm_source=tarotolasce&utm_medium=app&utm_campaign={campaign}
+// campaign ∈ {most-po-vykladu | profil | paticka}. Zpětně: placement
+// „post_reading"→most-po-vykladu, „footer"→paticka, „profil"→profil.
+const CAMPAIGN: Record<string, string> = {
+  post_reading: "most-po-vykladu",
+  cesta10: "most-po-vykladu",
+  footer: "paticka",
+  profil: "profil",
+};
 export function spirioUrl(spread: string, placement: string): string {
+  const campaign = CAMPAIGN[placement] ?? "paticka";
   const params = new URLSearchParams({
     utm_source: "tarotolasce",
-    utm_medium: "referral",
-    utm_campaign: "post_reading",
+    utm_medium: "app",
+    utm_campaign: campaign,
     utm_content: `${spread}_${placement}`,
   });
-  return `https://spirio.cz/landing-TBD?${params.toString()}`;
+  return `https://spirio.cz?${params.toString()}`;
 }
 
 import { logEvent } from "@/lib/analytics";

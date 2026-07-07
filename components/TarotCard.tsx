@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { Card } from "@/lib/cards";
 import { palette, tokens } from "@/lib/palette";
+import { heartPath } from "@/components/LogoSymbol";
 
 export function CardBack({ className = "" }: { className?: string }) {
   const [imgOk, setImgOk] = useState(true);
@@ -41,40 +42,32 @@ function CardBackSvg({ className = "" }: { className?: string }) {
       role="img"
       aria-label="Rub karty"
     >
-      {/* v1.3 §1: žádný gradient - plochá noční fialová */}
+      {/* v1.6 §3: SRDCOVÝ rub. Žádný gradient -
+          plochá noční fialová, soft-gold rám, srdce uprostřed.
+          (Monogram z dřívějška zrušen.) */}
       <rect width="120" height="200" rx="10" fill={palette.night.DEFAULT} />
       <rect x="5" y="5" width="110" height="190" rx="7" fill="none" stroke={tokens.softGold} strokeWidth="1.4" />
       <rect x="10" y="10" width="100" height="180" rx="5" fill="none" stroke={tokens.softGold} strokeWidth="0.7" />
-      {/* Centrální osmicípá hvězda */}
-      <g stroke={tokens.softGold} strokeWidth="1.2" fill="none">
-        <path d="M60 62 L68 92 L98 100 L68 108 L60 138 L52 108 L22 100 L52 92 Z" />
-        <path d="M60 76 L65 95 L84 100 L65 105 L60 124 L55 105 L36 100 L55 95 Z" strokeWidth="0.8" />
-        <circle cx="60" cy="100" r="7" />
-      </g>
-      {/* Srpek měsíce nahoře; dole pečeť TOL (v1.5 §5.8) */}
-      <g fill={tokens.softGold}>
-        <path d="M60 24 a 9 9 0 1 0 0.01 0 M60 27 a 7 7 0 1 1 -0.01 0" fillRule="evenodd" opacity="0.9" />
-      </g>
-      <g opacity="0.9">
-        <circle cx="60" cy="170" r="9" fill="none" stroke={tokens.softGold} strokeWidth="0.9" />
-        <text x="60" y="172.6" textAnchor="middle" fontSize="6" fontFamily="Lora, serif" fontWeight="600" fill={tokens.softGold} letterSpacing="0.4">TOL</text>
-      </g>
-      {/* Rohové hvězdičky */}
-      <g fill={tokens.softGold} opacity="0.85">
+      {/* Centrální srdce (heartPath ze sdíleného loga) */}
+      <path d={heartPath(60, 100, 60)} fill={tokens.romanticPink} />
+      <path d={heartPath(60, 100, 60)} fill="none" stroke={tokens.softGold} strokeWidth="1.4" />
+      <path d={heartPath(60, 100, 40)} fill="none" stroke={tokens.softGold} strokeWidth="0.7" opacity="0.8" />
+      {/* Malá srdíčka v rozích */}
+      <g opacity="0.85">
         {[
-          [22, 28],
-          [98, 28],
-          [22, 172],
-          [98, 172],
+          [22, 30],
+          [98, 30],
+          [22, 170],
+          [98, 170],
         ].map(([x, y], i) => (
-          <path key={i} d={`M${x} ${y - 4} L${x + 1.4} ${y - 1.4} L${x + 4} ${y} L${x + 1.4} ${y + 1.4} L${x} ${y + 4} L${x - 1.4} ${y + 1.4} L${x - 4} ${y} L${x - 1.4} ${y - 1.4} Z`} />
+          <path key={i} d={heartPath(x, y, 12)} fill={tokens.softGold} />
         ))}
       </g>
-      {/* Tečkovaný geometrický rastr */}
-      <g fill={tokens.softGold} opacity="0.5">
+      {/* Tečkovaný geometrický rastr (decentní) */}
+      <g fill={tokens.softGold} opacity="0.4">
         {Array.from({ length: 5 }).map((_, r) =>
           Array.from({ length: 3 }).map((_, c) => (
-            <circle key={`${r}-${c}`} cx={36 + c * 24} cy={44 + r * 28} r="0.9" />
+            <circle key={`${r}-${c}`} cx={36 + c * 24} cy={48 + r * 26} r="0.8" />
           ))
         )}
       </g>

@@ -70,11 +70,13 @@ export function loadPixelsIfConsented() {
 /** Přepošle event do pixelů - jen se souhlasem a po načtení. */
 export function trackPixelEvent(name: string, props: Record<string, unknown> = {}) {
   if (!hasFullConsent()) return;
+  // v1.6 §11: pixel eventy = view ceník, teaser_shown, unlock_click,
+  // paid, opt-in karty dne. Ostatní analytické eventy do pixelů nejdou.
   const map: Record<string, { meta?: string; tiktok?: string }> = {
     view_pricing: { meta: "ViewContent", tiktok: "ViewContent" },
-    checkout_start: { meta: "InitiateCheckout", tiktok: "InitiateCheckout" },
-    purchase: { meta: "Purchase", tiktok: "CompletePayment" },
-    reading_completed: { meta: "CompleteRegistration" },
+    teaser_shown: { meta: "ViewContent", tiktok: "ViewContent" },
+    unlock_click: { meta: "InitiateCheckout", tiktok: "InitiateCheckout" },
+    paid: { meta: "Purchase", tiktok: "CompletePayment" },
     daily_card_optin: { meta: "Lead", tiktok: "SubmitForm" },
   };
   const m = map[name];

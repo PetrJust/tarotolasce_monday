@@ -3,7 +3,7 @@
 // takže kredit se nikdy nestrhne za nevydaný výklad.
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { mockReading } from "@/lib/mockReadings";
+import { mockReading, mockFlowB } from "@/lib/mockReadings";
 import { saveReading } from "@/lib/store";
 import { sessionUser } from "@/lib/account";
 import {
@@ -17,7 +17,13 @@ import { withApiGuard } from "@/lib/apiGuard";
 export const dynamic = "force-dynamic";
 
 async function handlePOST(req: NextRequest) {
-  const { sessionId, question, cards, spread, useCredit } = await req.json();
+  // FLOW B (v1.6 §5.4): flowB=true + teaser -> plná generace dostane
+  // teaser jako vstup a stream NAVÁŽE PŘESNĚ tam, kde úvod skončil
+  // (klientovi se posílá jen pokračování; uloží se celý text).
+  // Kontinuita je v mocku zaručená konstrukcí (mockFlowB: teaser je
+  // přesný prefix plného textu). Odemčení působí okamžitě: stream
+  // startuje hned (<2 s po platbě).
+  const { sessionId, question, cards, spread, useCredit, flowB, teaser } = await req.json();
   if (!sessionId || !Array.isArray(cards) || !spread || !(spread in SPREADS)) {
     return new Response("bad request", { status: 400 });
   }
@@ -36,9 +42,20 @@ async function handlePOST(req: NextRequest) {
     ledgerCookieHeader = ledgerSetCookieHeader(c.ledger);
   }
 
-  // Jméno z profilu (v1.5 §5.6, mock: cookie tol_name) - úvod výkladu
+  // Jméno z profilu (mock: cookie tol_name) - úvod výkladu
   const profileName = decodeURIComponent(cookies().get("tol_name")?.value ?? "");
-  const text = mockReading(spread as SpreadKey, question ?? "", cards, profileName);
+  let text: string;
+  let streamFrom = 0; // Flow B: klientovi se streamuje až od konce teaseru
+  if (flowB) {
+    const fb = mockFlowB(spread as SpreadKey, question ?? "", cards, profileName);
+    text = fb.full;
+    // navázání: preferuj skutečný teaser z požadavku (produkce: prefix
+    // promptu); fallback na vlastní konstrukci
+    const t = typeof teaser === "string" && text.startsWith(teaser) ? teaser : fb.teaser;
+    streamFrom = t.length;
+  } else {
+    text = mockReading(spread as SpreadKey, question ?? "", cards, profileName);
+  }
   const su = await sessionUser(cookies().get("tol_session")?.value);
   const email = su?.email ?? cookies().get("tol_email")?.value ?? null;
   const saved = await saveReading({
@@ -54,7 +71,8 @@ async function handlePOST(req: NextRequest) {
     void sendPurchaseEmail(email, `${SITE_URL}/vyklad/${saved.id}`).catch(() => {});
   }
 
-  const words = text.split(" ");
+  const continuation = streamFrom > 0 ? text.slice(streamFrom) : text;
+  const words = continuation.split(" ");
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({

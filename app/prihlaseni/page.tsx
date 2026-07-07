@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import OtpInput from "@/components/OtpInput";
 import { announceSessionChange } from "@/lib/useSession";
 import { emailSuggestion } from "@/lib/emailSuggest";
-import { PERSONA_NAME } from "@/lib/persona";
 
 type Screen = "email" | "code";
 
@@ -148,12 +147,12 @@ export default function PrihlaseniPage() {
             </p>
           )}
           <p className="mt-3 text-body-dim">
-            Poslala jsem ti kód na {email} ·{" "}
+            Poslali jsme ho na: {email} ·{" "}
             <button
               onClick={() => { setScreen("email"); setLocked(false); setError(null); }}
               className="text-accent-soft underline underline-offset-2"
             >
-              upravit adresu
+              upravit e-mail
             </button>
           </p>
 
@@ -205,15 +204,15 @@ export default function PrihlaseniPage() {
                 className="mt-6 w-full rounded-xl border border-surface px-6 py-3 text-body-dim hover:border-accent-dim disabled:opacity-60"
               >
                 {resendIn > 0 ? (
-                  <span className="tabular-nums-count">Poslat znovu · {mmss}</span>
+                  <span className="tabular-nums-count">Poslat nový kód · {mmss}</span>
                 ) : (
-                  "Poslat znovu"
+                  "Poslat nový kód"
                 )}
               </button>
             </div>
           )}
           <p className="mt-6 text-xs text-body-dim">
-            Kód najdeš i v předmětu e-mailu od {PERSONA_NAME} z Tarotu o Lásce.
+            Kód najdeš i v předmětu e-mailu.
           </p>
         </>
       )}

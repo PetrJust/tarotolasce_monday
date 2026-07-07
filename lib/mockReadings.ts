@@ -229,6 +229,99 @@ function yesNoReading(card: PickedCard, seed: number, question = ""): string {
   ].join("\n\n");
 }
 
+
+/* ---------- FLOW B (v1.6 §5): teaser + kontinuita konstrukcí ----------
+ * Zdarma se ukazuje jen ÚVOD (5.1: přijetí otázky se jménem; jméno PRVNÍ
+ * karty + jedna konkrétní věta o ní; otevření směru přerušené uprostřed
+ * myšlenky pomlčkou). Plný text se STAVÍ TAK, že teaser je jeho přesným
+ * prefixem - kontinuita (5.4: teaser ⊂ finál, navazující věta dokončuje
+ * přerušenou) je zaručená konstrukcí, ne kontrolou po generaci.
+ * V produkci: teaser jde plné generaci jako vstupní prefix promptu. */
+
+function directionOpen(spread: SpreadKey, card: PickedCard, seed: number): { open: string; close: string } {
+  const c = CARD_BY_ID[card.cardId];
+  const name = c?.name ?? card.name;
+  if (spread === "yesno") {
+    const pairs = [
+      { open: `A právě ${name} napovídá, kterým směrem se to celé kloní —`, close: `a taky proč to tak je.` },
+      { open: `A právě ${name} ukazuje, co tvou odpověď doopravdy rozhoduje —`, close: `víc než cokoli, co ti teď běží hlavou.` },
+    ];
+    return pick(pairs, seed, 7);
+  }
+  if (spread === "my_ex") {
+    const pairs = [
+      { open: `A právě ${name} ukazuje, proč se k němu pořád vracíš —`, close: `a kde přesně to v tvém příběhu drží.` },
+      { open: `A právě ${name} otevírá to, co mezi vámi zůstalo nedořešené —`, close: `a co z toho si neseš jen ty sama.` },
+    ];
+    return pick(pairs, seed, 7);
+  }
+  const pairs = [
+    { open: `A právě ${name} ukazuje, co se mezi vámi teď doopravdy děje —`, close: `a proč to na povrchu vypadá jinak.` },
+    { open: `A právě ${name} napovídá, kde se vaše situace zadrhla —`, close: `a odkud se může začít hýbat.` },
+  ];
+  return pick(pairs, seed, 7);
+}
+
+function firstCardSentence(card: PickedCard, seed: number): string {
+  const c = CARD_BY_ID[card.cardId];
+  const name = c?.name ?? card.name;
+  const rev = card.reversed ? ", obráceně" : "";
+  // 5.1 ř. 2: jmenuje první kartu + JEDNA konkrétní věta (důkaz výkladu)
+  return `První karta, kterou sis vytáhla, je ${name}${rev}: ${cardMeaning(card)}.`;
+}
+
+export type FlowBReading = {
+  full: string; // kompletní výklad (teaser je jeho přesný prefix)
+  teaser: string; // to, co se streamuje zdarma (končí uprostřed myšlenky)
+};
+
+export function mockFlowB(
+  spread: SpreadKey,
+  question: string,
+  cards: PickedCard[],
+  name = ""
+): FlowBReading {
+  const seed = hash(
+    "flowb|" + question + "|" + cards.map((c) => c.cardId + (c.reversed ? "r" : "")).join(",")
+  );
+  const n = name.trim();
+  // ř. 1: přijetí otázky (se jménem, existuje-li; bez jména bez oslovení).
+  // „Sedla jsem si nad tvou otázku" je povolená JEN v úvodu (invariant 5).
+  const l1 = n ? `${n}, sedla jsem si nad tvou otázku.` : "Sedla jsem si nad tvou otázku.";
+  const l2 = firstCardSentence(cards[0], seed);
+  const dir = directionOpen(spread, cards[0], seed);
+
+  // Tělo po odemčení: dokončení přerušené věty + standardní stavba
+  // (bloky per karta, syntéza, akční krok, u ano/ne směr + pozor).
+  const bodyParts: string[] = [];
+  if (spread === "yesno") {
+    const card = cards[0];
+    const lean = card.reversed ? "spíš k ne" : "spíš k ano";
+    const leanShort = card.reversed ? "spíš ne" : "spíš ano";
+    bodyParts.push(`Karty se teď kloní ${lean}.`);
+    bodyParts.push(cardBlock(card, seed, 0, question));
+    bodyParts.push(
+      "A jedno upřímné připomenutí: karty neznají budoucnost a já ti ji slibovat nebudu. Ukazují, kde stojíš teď."
+    );
+    bodyParts.push(actionStep(seed));
+    bodyParts.push(
+      card.reversed
+        ? "Na co si dát pozor: obrácená karta často znamená, že první impuls přichází z nejistoty, ne z jasnosti. Nerozhoduj v nejslabší chvíli dne."
+        : "Na co si dát pozor: i dobrá karta neplatí navždy. Směr drž, ale nech si prostor přehodnotit, kdyby se okolnosti změnily."
+    );
+    bodyParts.push(`Takže ještě jednou, ať to nezapadne: teď je to ${leanShort}.`);
+  } else {
+    cards.forEach((c, i) => bodyParts.push(cardBlock(c, seed, i, question)));
+    bodyParts.push(synthesis(cards, seed));
+    bodyParts.push(actionStep(seed));
+  }
+  bodyParts.push(SIGNATURE);
+
+  const teaser = `${l1}\n\n${l2}\n\n${dir.open}`;
+  const full = `${teaser} ${dir.close}\n\n${bodyParts.join("\n\n")}`;
+  return { full, teaser };
+}
+
 /* ---------- hlavní vstup ---------- */
 function matches(cards: PickedCard[], ids: string[]): boolean {
   return cards.length === ids.length && cards.every((c, i) => c.cardId === ids[i]);

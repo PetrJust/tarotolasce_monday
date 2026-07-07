@@ -1,63 +1,88 @@
 // Landing: SSR, plný obsah v prvním HTML.
+// v1.6 §7.5 pořadí: Hero · Typy výkladů · Karta dne zdarma · FAQ · Footer.
+// Sekce „Jak to funguje" a „Jak vypadá výklad" ZRUŠENY (živá ochutnávka
+// Flow B je nahrazuje). Knihovna karet zůstává (SEO, není v zrušených).
 import type { Metadata } from "next";
 import Link from "next/link";
 import QuestionBox from "@/components/QuestionBox";
-import SampleReadings from "@/components/SampleReadings";
-import HowItWorks from "@/components/HowItWorks";
 import { CardBack } from "@/components/TarotCard";
 import { PERSONA_NAME, PERSONA_FULL } from "@/lib/persona";
 
 export const metadata: Metadata = {
   title: "Tarot o Lásce: AI tarotový výklad o lásce za 29 Kč",
   description:
-    `Polož otázku, vyber si karty a ${PERSONA_FULL} ti napíše osobní výklad o lásce a vztazích. První výklad za 29 Kč, karta dne zdarma.`,
+    `Porozumět lásce. Porozumět sobě. Polož otázku, vyber si karty a ${PERSONA_FULL} ti připraví osobní výklad o lásce. První výklad za 29 Kč, karta dne zdarma.`,
   alternates: { canonical: "https://tarotolasce.cz/" },
 };
 
+// FAQ 7.4 DOSLOVA (čtyři otázky) - i do JSON-LD
+const FAQ = [
+  {
+    q: "Kdo mi výklad připravuje?",
+    a: "Výklady vytváří Nomi, AI kartářka. Není to člověk. Pracuje s tvojí otázkou a kartami, které si vybereš.",
+  },
+  {
+    q: "Kolik výklad stojí?",
+    a: "První výklad stojí 29 Kč, další 49 Kč. Pokud se chceš vracet častěji, můžeš si vybrat i výhodnější balíček. Nejde o předplatné a nic se nestrhává automaticky.",
+  },
+  {
+    q: "Předpoví mi karty budoucnost?",
+    a: "Ne jako pevný scénář. Tarot bereme jako zrcadlo. Pomáhá pojmenovat, co se v situaci děje, a co můžeš udělat dál.",
+  },
+  {
+    q: "Co když mi první výklad nesedne?",
+    a: "Napiš nám. Když ti první výklad nic nedá, vrátíme ti 29 Kč.",
+  },
+];
 
 const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Kdo mi karty vykládá?",
-      acceptedAnswer: { "@type": "Answer", text: `Všechny výklady vytváří ${PERSONA_NAME}, AI kartářka aplikace Tarot o Lásce. Není to člověk; je to umělá inteligence vyladěná na laskavé a osobní výklady o lásce.` },
-    },
-    {
-      "@type": "Question",
-      name: "Kolik výklad stojí?",
-      acceptedAnswer: { "@type": "Answer", text: "První výklad stojí 29 Kč, další 49 Kč. Balíček 5 výkladů vychází na 199 Kč a 20 výkladů na 599 Kč. Karta dne je zdarma." },
-    },
-    {
-      "@type": "Question",
-      name: "Předpoví mi karty budoucnost?",
-      acceptedAnswer: { "@type": "Answer", text: "Ne jako pevný scénář. Tarot bereme jako zrcadlo: pomáhá ti utřídit pocity a vidět situaci jinýma očima. Rozhodnutí zůstává vždycky na tobě." },
-    },
-  ],
+  mainEntity: FAQ.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
 };
 
+// 7.2 Typy výkladů DOSLOVA
+const TYPES = [
+  {
+    q: "«Má mě rád?»",
+    tag: "Ano / Ne · 1 karta",
+    text: "Rychlý výklad, když potřebuješ jasnější směr. Nomi vytáhne jednu kartu a ukáže, jestli to mezi vámi směřuje spíš k ano, nebo spíš k ne.",
+  },
+  {
+    q: "«Kdy se ozve?»",
+    tag: "3 karty",
+    text: "Výklad pro chvíle, kdy čekáš na zprávu. Tři karty ukážou, co se děje teď, co kontakt brzdí a kam se situace může posunout.",
+  },
+  {
+    q: "«Vrátí se ke mně ex?»",
+    tag: "6 karet",
+    text: "Hlubší výklad pro vztah, který v tobě pořád zůstává. Šest karet se podívá na minulost, jeho pocity, překážky, možnost návratu i tvůj další krok.",
+  },
+];
 
 export default function LandingPage() {
   return (
     <div className="py-10">
-      {/* Hero */}
+      {/* HERO (7.1 DOSLOVA) */}
       <section className="text-center">
         <div className="mx-auto mb-6 flex w-fit -space-x-8" aria-hidden>
           <CardBack className="h-32 w-20 -rotate-12 drop-shadow-card" />
           <CardBack className="h-32 w-20 drop-shadow-card" />
           <CardBack className="h-32 w-20 rotate-12 drop-shadow-card" />
         </div>
-        {/* v1.3 §3.1: hero DOSLOVA. Emotivnější varianta z GPT korekce je
-            archiv B pro pozdější A/B test, nenasazuje se. Věta o klidu se
-            přestěhovala na obrazovku před mícháním (§3.8). */}
         <h1 className="font-display text-[42px] leading-[1.1] font-semibold text-body sm:text-5xl">
-          Co ti teď běží hlavou?
+          Na co teď v lásce pořád myslíš?
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-body-dim">
-          Napiš otázku, vyber si karty z vějíře a {PERSONA_NAME}, tvoje AI
-          kartářka, ti je osobně vyloží. První výklad za 29 Kč. Bez
-          předplatného.
+          Napiš otázku vlastními slovy. {PERSONA_NAME} ti zamíchá karty a
+          připraví výklad, ke kterému se můžeš kdykoliv vrátit.
+        </p>
+        <p className="mx-auto mt-2 max-w-xl text-body-dim">
+          První výklad za 29 Kč. Bez předplatného.
         </p>
       </section>
 
@@ -65,130 +90,72 @@ export default function LandingPage() {
         <QuestionBox />
       </section>
 
-      {/* Jak to funguje - tři ilustrace ve stylu rubů (v1.3 §3.3, DOSLOVA) */}
-      <section className="mt-14">
+      {/* TYPY VÝKLADŮ (7.2, nová sekce) */}
+      <section className="mt-16">
         <h2 className="font-display text-[32px] leading-[1.15] font-semibold text-body">
-          Jak to funguje
+          Každá otázka potřebuje jiný typ výkladu
         </h2>
-        <HowItWorks />
+        <p className="mt-3 max-w-2xl text-body-dim">
+          Na jednoduchou otázku stačí jedna karta. Když se ale k někomu pořád
+          vracíš v myšlenkách, je potřeba podívat se hlouběji.
+        </p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {TYPES.map((t) => (
+            <div key={t.q} className="rounded-2xl border border-surface bg-surface p-6">
+              <p className="font-display text-xl font-semibold text-body">{t.q}</p>
+              <p className="mt-1 text-xs uppercase tracking-wider text-accent-soft">
+                {t.tag}
+              </p>
+              <p className="mt-3 text-sm text-body-dim">{t.text}</p>
+            </div>
+          ))}
+        </div>
+        <Link href="/vyklad/novy" className="btn-primary mt-6 w-full sm:w-auto">
+          Položit vlastní otázku
+        </Link>
       </section>
 
-      {/* Ukázkové výklady (F.4): 1 rozbalená + 2 sbalené */}
-      <section className="mt-14">
-        <h2 className="font-display text-[32px] leading-[1.15] font-semibold text-body">
-          Jak vypadá výklad
-        </h2>
-        <SampleReadings />
-      </section>
-
-      {/* Karta dne teaser (F.5: pod ukázkami) */}
-      <section className="mt-14 rounded-2xl border border-surface bg-surface p-6 text-center">
+      {/* KARTA DNE ZDARMA (7.3 DOSLOVA) */}
+      <section className="mt-16 rounded-2xl border border-surface bg-surface p-6 text-center">
         <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
           Karta dne zdarma
         </h2>
         <p className="mt-2 text-body-dim">
-          Každý den ti {PERSONA_NAME} otočí jednu kartu a napíše krátký
-          vzkaz. Bez placení, bez závazků.
+          Jedna karta na dnešek. Krátký vzkaz, ke kterému se můžeš během dne
+          vrátit.
         </p>
         <Link
           href="/karta-dne"
           className="mt-4 inline-block rounded-xl border border-accent-dim px-6 py-3 text-accent-soft hover:border-accent"
         >
-          Otočit dnešní kartu
+          Otočit kartu dne
         </Link>
       </section>
 
-      {/* SKRYTO do launche: smyšlené recenze jsou po novele zákona o ochraně
-          spotřebitele zakázaná praktika. Sekce se zapne až se skutečnými
-          recenzemi (komponenta zachována). */}
-      {false && (
-      <section className="mt-14">
-        <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
-          Zkušenosti
-        </h2>
-        <div className="mt-5 space-y-4">
-          {[
-            {
-              text: `${PERSONA_NAME} mi pomohla vidět situaci s bývalým úplně jinak. Konečně jsem si přiznala, co jsem dlouho věděla.`,
-              who: "Markéta K.",
-              when: "duben 2026",
-            },
-            {
-              text: "Byla jsem skeptická, ale výklad byl laskavý a překvapivě trefný v tom, co teď prožívám. Rituál s kartami je krásný.",
-              who: "Lucie N.",
-              when: "duben 2026",
-            },
-            {
-              text: "Vracím se ke kartě dne každé ráno. Je to malá chvilka jen pro mě, než začne den.",
-              who: "Jana D.",
-              when: "březen 2026",
-            },
-          ].map((r) => (
-            <blockquote
-              key={r.who}
-              className="rounded-2xl border border-surface bg-surface p-5"
-            >
-              <p className="text-body">„{r.text}"</p>
-              <footer className="mt-2 text-sm text-body-dim">
-                {r.who} · {r.when}
-              </footer>
-            </blockquote>
-          ))}
-        </div>
-      </section>
-      )}
-
-
-      {/* FAQ (schváleno zadáním paleta-a-kontrast; FAQPage JSON-LD níže) */}
+      {/* FAQ (7.4 DOSLOVA, akordeon sbalený) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <section className="mt-14">
+      <section className="mt-16">
         <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
           Časté otázky
         </h2>
-        {/* v1.3 §3.6: akordeon, jen tři otázky SBALENÉ. Odpověď na
-            budoucnost DOSLOVA; „průvodkyně" se v FAQ nesmí objevit
-            (rezervováno pro živé lidi na Spirio). První dvě odpovědi
-            zjednodušené (NÁVRH dle „sloučení", plné texty nedodány). */}
         <div className="mt-5 space-y-3">
-          <details className="group rounded-2xl border border-surface bg-surface p-5">
-            <summary className="cursor-pointer list-none font-medium text-body marker:hidden [&::-webkit-details-marker]:hidden">
-              Kdo mi karty vykládá?
-              <span className="float-right text-accent-soft transition group-open:rotate-45">+</span>
-            </summary>
-            <p className="mt-2 text-sm text-body-dim">
-              Všechny výklady vytváří {PERSONA_NAME}, naše AI kartářka. Není
-              to člověk. Píše jen pro tebe, ke tvé otázce a tvým kartám.
-            </p>
-          </details>
-          <details className="group rounded-2xl border border-surface bg-surface p-5">
-            <summary className="cursor-pointer list-none font-medium text-body [&::-webkit-details-marker]:hidden">
-              Kolik výklad stojí?
-              <span className="float-right text-accent-soft transition group-open:rotate-45">+</span>
-            </summary>
-            <p className="mt-2 text-sm text-body-dim">
-              První výklad 29 Kč, další 49 Kč. Balíček 5 výkladů za 199 Kč,
-              20 výkladů za 599 Kč. Karta dne je zdarma.
-            </p>
-          </details>
-          <details className="group rounded-2xl border border-surface bg-surface p-5">
-            <summary className="cursor-pointer list-none font-medium text-body [&::-webkit-details-marker]:hidden">
-              Předpoví mi karty budoucnost?
-              <span className="float-right text-accent-soft transition group-open:rotate-45">+</span>
-            </summary>
-            <p className="mt-2 text-sm text-body-dim">
-              Ne jako pevný scénář. Tarot bereme jako zrcadlo: pomáhá ti
-              utřídit pocity a vidět situaci jinýma očima. Rozhodnutí zůstává
-              vždycky na tobě.
-            </p>
-          </details>
+          {FAQ.map((f) => (
+            <details key={f.q} className="group rounded-2xl border border-surface bg-surface p-5">
+              <summary className="cursor-pointer list-none font-medium text-body [&::-webkit-details-marker]:hidden">
+                {f.q}
+                <span className="float-right text-accent-soft transition group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-2 text-sm text-body-dim">{f.a}</p>
+            </details>
+          ))}
         </div>
       </section>
 
-      {/* Knihovna karet */}
-      <section className="mt-14 rounded-2xl border border-surface bg-surface p-6">
+      {/* Knihovna karet (SEO; není v zrušených sekcích §7.5) */}
+      <section className="mt-16 rounded-2xl border border-surface bg-surface p-6">
         <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
           Co znamenají karty v lásce
         </h2>

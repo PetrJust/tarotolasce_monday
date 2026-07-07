@@ -141,7 +141,11 @@ export default function ProfilPage() {
         ) : (
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-display text-xl font-semibold text-body">
+              {/* 7.14 (2) DOSLOVA */}
+              <p className="text-xs uppercase tracking-wider text-body-dim">
+                Přihlášená jako
+              </p>
+              <p className="mt-1 font-display text-xl font-semibold text-body">
                 {name || email}
               </p>
               {name && <p className="mt-0.5 text-sm text-body-dim">{email}</p>}
@@ -169,7 +173,7 @@ export default function ProfilPage() {
 
       {/* (3) Poslední výklad + historie; copy fix DOSLOVA (bez „zařízení") */}
       <div className="mt-4 rounded-2xl border border-surface bg-surface p-6">
-        <p className="text-xs uppercase tracking-wider text-body-dim">Výklady</p>
+        <p className="text-xs uppercase tracking-wider text-body-dim">Tvoje výklady</p>
         {lastReading && (
           <p className="mt-1 text-body">
             Poslední výklad:{" "}
@@ -182,33 +186,41 @@ export default function ProfilPage() {
           </p>
         )}
         <p className="mt-1 text-body">
-          Zatím sis vyložila{" "}
-          <strong className="lining-nums-price">{reads}</strong>{" "}
-          {plural(reads, "výklad", "výklady", "výkladů")}.{" "}
+          {reads > 0 ? (
+            <>
+              Máš {plural(reads, "uložený", "uložené", "uložených")}{" "}
+              <strong className="lining-nums-price">{reads}</strong>{" "}
+              {plural(reads, "výklad", "výklady", "výkladů")}.
+            </>
+          ) : (
+            <>Zatím tu nemáš žádný výklad.</>
+          )}{" "}
           <Link href="/historie" className="text-accent-soft underline underline-offset-2 hover:text-accent">
             Otevřít historii
           </Link>
         </p>
       </div>
 
-      {/* (4) Kredit DOSLOVA, hodnota vždy ze SUM ledgeru */}
+      {/* (4) Zbývající výklady - hodnota vždy ze SUM ledgeru */}
       <div className="mt-4 rounded-2xl border border-surface bg-surface p-6">
-        <p className="text-xs uppercase tracking-wider text-body-dim">Balíček</p>
+        <p className="text-xs uppercase tracking-wider text-body-dim">Zbývající výklady</p>
         <p className="mt-1 text-body">
           {balance > 0 ? (
             <>Z balíčku ti zbývá <strong className="lining-nums-price">{balance}</strong> {plural(balance, "výklad", "výklady", "výkladů")}.</>
           ) : (
-            <>Nemáš žádný aktivní balíček.</>
-          )}{" "}
-          <Link href="/cenik" className="text-accent-soft underline underline-offset-2 hover:text-accent">
-            Zobrazit balíčky
-          </Link>
+            <>
+              Nemáš žádný aktivní balíček.{" "}
+              <Link href="/cenik" className="text-accent-soft underline underline-offset-2 hover:text-accent">
+                Zobrazit balíčky
+              </Link>
+            </>
+          )}
         </p>
       </div>
 
       {/* (5) Ranní pozvánka - přepínač */}
       <div className="mt-4 rounded-2xl border border-surface bg-surface p-6">
-        <p className="text-xs uppercase tracking-wider text-body-dim">Ranní pozvánka</p>
+        <p className="text-xs uppercase tracking-wider text-body-dim">Ranní připomenutí karty dne</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {([
             ["daily", "Každé ráno"],
@@ -234,13 +246,13 @@ export default function ProfilPage() {
       {/* (6) Tichá řádka DOSLOVA, sekundární styl, mimo timing pravidlo mostu */}
       <p className="mt-6 text-sm text-body-dim">
         <a
-          href={`${SPIRIO_URL}?utm_source=tarotolasce&utm_medium=referral&utm_campaign=profile_row`}
+          href={`${SPIRIO_URL}?utm_source=tarotolasce&utm_medium=app&utm_campaign=profil`}
           target="_blank"
           rel="noopener"
-          onClick={() => logEvent("spirio_click", { source: "profile_row", reads })}
+          onClick={() => logEvent("spirio_click", { source: "profil", reads })}
           className="underline underline-offset-2 hover:text-body"
         >
-          Potřebuješ si promluvit s člověkem?
+          Chceš se spojit se skutečnou kartářkou? → Spirio
         </a>
       </p>
 

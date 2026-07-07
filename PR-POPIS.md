@@ -1,73 +1,66 @@
-# PR popis — implementace zadání v1.5 (konsolidované)
+# PR popis — implementace zadání v1.6 FINAL
 
 ## `[BLOKER]` §4 Ledger — odpověď týmu (PRVNÍ VĚC)
 
-**1. Je kredit server-side, vázaný na user_id ověřeného účtu (ne device/cookie)?**
+Odpověď se od v1.5 nemění (architektura je stejná):
 
-**NE — v aktuálním mock buildu ne, a je to vědomé dočasné rozhodnutí.**
-Stav po hotfixu serverless split-brainu (session 4):
+**1. Kredit server-side vázaný na user_id? NE v běžícím mocku** — po
+serverless hotfixu cestuje v podepsané cookie (prohlížeč + ověřený
+e-mail). **ANO v referenční implementaci** lib/account.ts (append-only,
+SUM, idempotence), která je připravená pro PostgreSQL (schema.sql).
 
-- **Referenční implementace** `lib/account.ts` JE server-side, vázaná na
-  účet (user_id z ověřeného e-mailu), append-only ledger, zůstatek = SUM.
-  Prochází všech 6 testů (a)–(f), viz níže.
-- **Běžící mock na Vercelu** ale nemá sdílené úložiště (serverless
-  instance mají oddělené /tmp; soubor na disku způsoboval náhodné mizení
-  sessions/kreditů). Proto kreditní stav dočasně cestuje v HMAC-podepsané
-  httpOnly cookie → je vázaný na **prohlížeč + ověřený e-mail**, ne čistě
-  na účet napříč zařízeními.
-- **Priorita č. 1 pro produkci: PostgreSQL dle schema.sql** (hotové DDL v
-  repu). Po migraci se routy přepnou z cookie ledgeru zpět na lib/account
-  nad DB — rozhraní je identické, testy A jsou připravené.
+**2. „Na tomhle zařízení" = realita dat v mocku** (výklady v /tmp
+instance, počet z lokální cookie). Copy fix „Zatím sis vyložila {n}
+výklad/y/ů." je nasazený; skutečná migrace dat k účtu = priorita č. 1.
 
-**2. „Na tomhle zařízení" v profilu — copy relikt, nebo realita dat?**
+**3. Šest testů:** referenční lib/account 6/6 ✅; běžící cookie-mock:
+(a)(b)(d)(f) ✅, **(c) ❌** (kredit vázaný na prohlížeč), **(e) ⚠️**
+(anonymní okno = nová cookie; server-side jen s DB).
 
-**Realita dat v mocku.** Počet výkladů se počítal z lokální cookie
-(clientState) a uložené výklady leží v /tmp instance. Copy fix DOSLOVA
-(„Zatím sis vyložila {n} výklad/y/ů.") je v tomto PR nasazený; skutečná
-migrace výkladů i kreditů k účtu = součást migrace na DB (priorita č. 1).
-
-**3. Šest testů:**
-
-| test | lib/account (referenční) | mock cookie ledger na Vercelu |
-|---|---|---|
-| (a) append-only, SUM | ✅ | ✅ (refs + balance v podepsané cookie) |
-| (b) čerpání při 0 odmítá server | ✅ | ✅ |
-| (c) kredit napříč zařízeními | ✅ | ❌ (vázané na prohlížeč — limit mocku) |
-| (d) idempotence payment_intent_id | ✅ | ✅ |
-| (e) intro jen jednou na účet i z anonymního okna | ✅ | ⚠️ částečně (anonymní okno = jiná cookie → obejde; server-side jen s DB) |
-| (f) žádná enumerace e-mailů | ✅ | ✅ |
-
-**Závěr pro launch: trojí ANO zatím NENÍ. Balíčky neprodávat ostře,
-dokud neproběhne migrace na PostgreSQL (testy c + e vyžadují sdílené
-server-side úložiště, které serverless mock z principu nemá).**
-Na preview/testování balíčky fungují (Stripe test mode).
+**Závěr: trojí ANO zatím není → datum launche určuje migrace na
+PostgreSQL.** Flow B, ceník i balíčky jsou implementované a na preview
+plně testovatelné (Stripe test mode).
 
 ---
 
-## KONFLIKTY (zadání vs. realita buildu — pravidlo §0/3)
+## KONFLIKTY (v1.6 vs. realita — pravidlo §0/3)
 
-1. **§5.5 carousel průvodkyň**: v buildu žádný carousel s počítadlem
-   „Průvodkyně · 1 z 10" neexistuje (Spirio most je textový box + CTA).
-   Není co odstraňovat; nadpis „Naše průvodkyně" a tečky nasadíme až
-   s carouselem (nestavíme — není položkou ZMĚNA „postavit carousel").
-2. **§5.9 disclaimer dle GPT sekce 19**: „GPT copy balíček" (docx) není
-   přiložen. Současný text patičky už obsahuje požadované „ani krizovou
-   pomoc" — povýšen na sdílenou konstantu `DISCLAIMER` (lib/site.ts)
-   a nahrazeny všechny lokální kopie. Až dorazí finální znění ze sekce 19,
-   změní se na JEDNOM místě.
-3. **§5.8 logo assety v1 + v2**: přílohy nejsou dodané. Symbol (karta +
-   soft-gold rám + srdce), TOL pečeť, wordmark v Loře a tagline jsou
-   implementované z textového popisu zadání v tokens v3; finální schválení
-   wordmarku `[ČEKÁ NA ROMANA]`.
-4. **§3 zakázaný hex #3C1146**: v repu se nikdy nevyskytoval (grep čistý
-   před i po). Ostatní tři odstraněny.
-5. **§5.10 „Roman narazil na opakované kódy"**: příčinou byl serverless
-   split-brain (session v /tmp jedné instance) — opraveno bezstavovou
-   podepsanou session (session 4) + v tomto PR rolling 90 dní.
+1. **§0 přílohy „logo SVG (symbol, rub-karty, favicon-16)" NEJSOU
+   dodané.** Srdcový rub, symbol i favicon jsou implementované z textového
+   popisu (§3) v tokens v3; až dorazí auditované SVG, vymění se 1:1
+   v components/TarotCard.tsx (CardBack), components/LogoSymbol.tsx,
+   app/icon.svg, public/icon-512.svg.
+2. **§8 „karusel průvodkyň: bez číslování, tečky"** — v buildu žádný
+   karusel neexistuje (Spirio most je box + CTA). Není co upravovat.
+3. **§5.5 měkký limit na IP** — na serverless mocku je best-effort
+   (počítadlo v paměti instance; instance se střídají). Tvrdý limit
+   session+e-mail (podepsaná cookie) funguje spolehlivě; IP limit
+   nabude plné síly s DB/Redis v produkci. V kódu připraveno s TODO.
+4. **§6 „loguje se doručení pozvánky"** — ranní odesílání nemá v mocku
+   cron; `daily_invite_sent` se loguje v mock odesílací vrstvě
+   (lib/email) a proklik přes parametr `?from=invite` na /karta-dne.
+   Reálný cron = produkční infra.
+5. **§7.6 obrazovka otázky** — v1.6 dává jen CTA „Položit otázku";
+   dřívější v1.3 text disabled stavu („Nejdřív napiš otázku") v1.6
+   neuvádí → disabled stav zůstává (tlačítko neaktivní bez textu),
+   label je konstantně „Položit otázku" (invariant 2: žádné copy mimo
+   zadání).
+6. **§9 „slepé srovnání s texty 7.2"** — vyžaduje lidské oko/LLM juror;
+   strojová část golden setu pokrývá zbylá kritéria, slepé srovnání je
+   v checklistu jako manuální krok.
+7. **§12 „Lora potvrzena zakladatelem pohledem"** + **§3 lockup
+   [ČEKÁ NA ROMANA]** — manuální kroky mimo kód.
 
 ## Log rozhodnutí
 
-- **6. 7. 2026 — zakladatel:** checkbox §1837 se v checkoutu nezobrazuje;
-  skrytý za flag `SHOW_1837_CONSENT` (default off), kód checkboxu zůstává.
-  Právo na odstoupení 14 dní trvá; OP nesmí obsahovat §1837 zánik.
-  (Zadání v1.5 §5.1.)
+- **6. 7. 2026 — zakladatel:** checkbox §1837 se v paywallu nezobrazuje;
+  flag `SHOW_1837_CONSENT` default off, kód checkboxu zůstává. Právo na
+  odstoupení 14 dní trvá; OP nesmí tvrdit opak (§10.2).
+- **v1.6 — zakladatel:** Flow B rovnou bez A/B; staré flow za flagem
+  `FLOW_CLASSIC` (default off, návrat = přepnutí flagu).
+- **v1.6 — zakladatel (2× potvrzeno):** karta dne bez rituálu, jeden dotek.
+
+## Flagy
+
+- `FLOW_CLASSIC` = off → Flow B (teaser → fólie → platba → navázání).
+- `SHOW_1837_CONSENT` = off → checkbox §1837 skrytý.

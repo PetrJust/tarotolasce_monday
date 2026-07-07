@@ -1,24 +1,33 @@
 "use client";
+// Feedback po dočtení výkladu (v1.6 §7.11): BINÁRNÍ, párovaný na verzi
+// promptu a modelu. Copy DOSLOVA: „Jak ti výklad sedl? [Sedl mi] [Spíš ne]"
+// → „Děkujeme. Pomáhá nám to výklady zlepšovat." Žádné komentářové pole.
 import { logEvent, readingType } from "@/lib/analytics";
 import { PROMPT_VERSION, MODEL_VERSION } from "@/lib/version";
-// Hodnocení výkladu po jeho dočtení. Klidné, bez nátlaku, dá se přeskočit.
-// „Jak ti výklad sedl?" + palec nahoru/dolů + volitelný komentář.
 import { useState } from "react";
 
-export default function ReadingFeedback({ readingId, spread }: { readingId: string; spread?: string }) {
-  const [rating, setRating] = useState<"up" | "down" | null>(null);
-  const [comment, setComment] = useState("");
+export default function ReadingFeedback({
+  readingId,
+  spread,
+}: {
+  readingId: string;
+  spread?: string;
+}) {
   const [sent, setSent] = useState(false);
 
-  async function send(r: "up" | "down", withComment: boolean) {
-    logEvent("feedback_submitted", { rating: r, withComment, promptVersion: PROMPT_VERSION, modelVersion: MODEL_VERSION, type: spread ? readingType(spread) : undefined });
-    setRating(r);
+  async function send(r: "up" | "down") {
+    logEvent("feedback_submitted", {
+      rating: r,
+      promptVersion: PROMPT_VERSION,
+      modelVersion: MODEL_VERSION,
+      type: spread ? readingType(spread) : undefined,
+    });
+    setSent(true);
     await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ readingId, rating: r, comment: withComment ? comment : "" }),
+      body: JSON.stringify({ readingId, rating: r }),
     }).catch(() => {});
-    if (withComment || r === "up") setSent(true);
   }
 
   if (!readingId) return null;
@@ -26,7 +35,7 @@ export default function ReadingFeedback({ readingId, spread }: { readingId: stri
   if (sent) {
     return (
       <div className="mt-10 rounded-2xl border border-surface bg-surface p-5 text-center">
-        <p className="text-body-dim">Děkujeme, že ses podělila. Výklady se díky tobě zlepšují.</p>
+        <p className="text-body-dim">Děkujeme. Pomáhá nám to výklady zlepšovat.</p>
       </div>
     );
   }
@@ -36,57 +45,18 @@ export default function ReadingFeedback({ readingId, spread }: { readingId: stri
       <p className="text-center font-display text-xl text-body">Jak ti výklad sedl?</p>
       <div className="mt-4 flex justify-center gap-3">
         <button
-          onClick={() => send("up", false)}
-          aria-pressed={rating === "up"}
-          className={`rounded-xl border px-5 py-2.5 text-sm transition-colors ${
-            rating === "up"
-              ? "border-accent bg-rose-500/10 text-accent-soft"
-              : "border-surface text-body-dim hover:text-body"
-          }`}
+          onClick={() => send("up")}
+          className="rounded-xl border border-surface px-5 py-2.5 text-sm text-body-dim transition-colors hover:text-body"
         >
           Sedl mi
         </button>
         <button
-          onClick={() => setRating("down")}
-          aria-pressed={rating === "down"}
-          className={`rounded-xl border px-5 py-2.5 text-sm transition-colors ${
-            rating === "down"
-              ? "border-accent bg-rose-500/10 text-accent-soft"
-              : "border-surface text-body-dim hover:text-body"
-          }`}
+          onClick={() => send("down")}
+          className="rounded-xl border border-surface px-5 py-2.5 text-sm text-body-dim transition-colors hover:text-body"
         >
           Spíš ne
         </button>
       </div>
-
-      {rating && (
-        <div className="mt-4">
-          <label htmlFor="fb" className="block text-center text-xs text-body-dim">
-            Chceš se podělit, co bys změnila? (nepovinné)
-          </label>
-          <textarea
-            id="fb"
-            rows={2}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="mt-2 w-full rounded-xl border border-surface bg-surface-2 p-3 text-sm text-body focus:border-accent"
-          />
-          <div className="mt-2 flex justify-center gap-3">
-            <button
-              onClick={() => send(rating, true)}
-              className="rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-medium text-plum-900 hover:opacity-90"
-            >
-              Odeslat
-            </button>
-            <button
-              onClick={() => setSent(true)}
-              className="rounded-xl px-5 py-2.5 text-sm text-body-dim hover:text-body"
-            >
-              Přeskočit
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

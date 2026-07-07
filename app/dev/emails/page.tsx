@@ -47,7 +47,7 @@ const EMAILS: EmailTpl[] = [
     id: "transactional-purchase",
     group: "Transakční",
     subject: "Tvůj výklad od AI kartářky {persona}",
-    preheader: "Trvalý odkaz na tvůj výklad.",
+    preheader: "Tvůj výklad máš uložený.",
     body: [
       "Ahoj,",
       "tady je trvalý odkaz na tvůj výklad. Nikam nezmizí a uvidíš ho jen ty.",

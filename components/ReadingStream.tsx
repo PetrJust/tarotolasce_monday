@@ -10,6 +10,8 @@ export default function ReadingStream({
   spread,
   cards,
   useCredit = false,
+  flowB = false,
+  teaser = "",
   onMeta,
   onDone,
   onError,
@@ -18,13 +20,17 @@ export default function ReadingStream({
   question: string;
   spread: string;
   cards: PickedCard[];
-  /** Čerpat výklad z balíčku (server si strhne kredit; idempotentní na sessionId). */
+  /** Čerpat výklad z balíčku (server strhne z ledgeru; idempotentní na sessionId). */
   useCredit?: boolean;
+  /** FLOW B (v1.6 §5.4): teaser už je na obrazovce - stream NAVÁŽE přesně
+   * tam, kde úvod skončil (server posílá jen pokračování). */
+  flowB?: boolean;
+  teaser?: string;
   onMeta?: (readingId: string) => void;
   onDone?: (fullText: string) => void;
   onError?: () => void;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(flowB ? teaser : "");
   const [started, setStarted] = useState(false);
   const [doneLocal, setDoneLocal] = useState(false);
   const ran = useRef(false);
@@ -64,7 +70,7 @@ export default function ReadingStream({
         const res = await fetch("/api/reading/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, question, spread, cards, useCredit }),
+          body: JSON.stringify({ sessionId, question, spread, cards, useCredit, flowB, teaser }),
         });
         if (!res.ok || !res.body) throw new Error("stream failed");
 
@@ -116,7 +122,10 @@ export default function ReadingStream({
     return (
       <div className="flex items-center justify-center gap-3 py-12 text-body-dim">
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-        <span className="font-display text-xl">Tvůj výklad se právě píše</span>
+        <span className="font-display text-xl">Nomi připravuje tvůj výklad</span>
+        <span className="text-sm text-body-dim">
+          Dívá se na tvoji otázku a karty, které sis vybrala.
+        </span>
       </div>
     );
   }

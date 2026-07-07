@@ -368,3 +368,49 @@ není - mock cookie ledger nesplní testy c+e, produkce = PostgreSQL).
 (OP/OOU texty, wordmark schválení), GPT balíček (finální disclaimer
 sekce 19), pixel ID do env, Meta Test Events / TikTok debug, migrace
 na PostgreSQL (BLOKER), e-mail infra DNS.
+
+---
+
+# SESSION 6: zadání v1.6 FINAL — zpracováno
+
+BLOKER §4 zodpovězen v PR-POPIS.md (trojí ANO zatím není → datum launche
+= migrace na PostgreSQL). 7 KONFLIKTŮ + log rozhodnutí + flagy tamtéž.
+
+**Hlavní změny (Flow B + copy + logo):**
+- **Flow B (§5, nejvyšší priorita):** otázka → „Na chvíli se zastav" →
+  míchání → vějíř → výběr → ÚVOD ZDARMA (teaser, klientský word-by-word)
+  → fólie se STRUKTUROU (názvy zbylých karet + mini-nadpisy, rozmazaný
+  text) → platební schodiště a–f → platba → zbytek NAVÁŽE přesně tam,
+  kde úvod skončil. Engine lib/mockReadings.mockFlowB: teaser je PŘESNÝ
+  prefix full (kontinuita konstrukcí, ne kontrolou). Nová teaser route
+  (limit 1/den/identita přes podepsanou cookie + měkký IP limit; krize
+  se NIKDY nezamyká za fólii). stream route umí flowB → streamuje jen
+  continuation od teaser.length. FLOW_CLASSIC (default off) vrací staré
+  flow. Golden set §9: 19/19 (úvod jmenuje 1. kartu + končí „—",
+  teaser⊂full, oslovení jménem).
+- **§1 question_category** od dne 1 (lib/classifier.categorize: láska/
+  práce/peníze/životní cesta/jiné) + paid flag; event question_category.
+- **§3 srdcový rub VŠUDE** (CardBack = srdce místo hvězdy/měsíce, srdíčka
+  v rozích); TOL monogram ZRUŠEN úplně (TolSeal odstraněn, footer submark
+  = LogoSymbol se srdcem). Grep TOL/hvězda/staré hexy/Fraunces = 0.
+- **§6 karta dne:** copy delty DOSLOVA (před/po otočení, už tažená);
+  daily_invite_sent (mock lib/email.sendDailyInvite) + daily_invite_click
+  (?from=invite).
+- **§7 landing PŘESTAVĚN (§7.5):** Hero · Typy výkladů (nová sekce) ·
+  Karta dne · FAQ (4 otázky) · Footer. „Jak to funguje" + „Jak vypadá
+  výklad" ZRUŠENY (soubory smazány). Nové chipy (5). Vše 7.1–7.4 DOSLOVA.
+- **§7.10–7.17 copy DOSLOVA:** rámování výkladu, feedback binární (7.11),
+  „Co dál?" (ThreePaths 7.12), historie s počtem karet (7.13), profil
+  delty (7.14: Přihlášená jako / Tvoje výklady / Zbývající výklady /
+  Ranní připomenutí karty dne / Spirio řádka), ceník (7.15), OTP (7.16),
+  footer + NOVÝ disclaimer (7.17, jiné znění!) jako sdílená konstanta.
+  Label „Trvalý odkaz" odstraněn z UI.
+- **§8 SPIRIO:** SPIRIO_URL = https://spirio.cz (bez /landing-TBD);
+  utm_medium=app, utm_campaign {most-po-vykladu|profil|paticka}.
+- **§11 pixely:** mapa eventů = view_pricing, teaser_shown, unlock_click,
+  paid, daily_card_optin (consent gating beze změny).
+- Build v1.6.0, PROMPT_VERSION mock-flowb-1.
+
+**Zbývá mimo kód:** migrace PostgreSQL (BLOKER), Roman (OP/OOU/wordmark),
+logo SVG přílohy, pixel ID do env, reálný cron ranní pozvánky, slepé
+srovnání 7.2 (lidský juror), Lora potvrzení pohledem, e-mail DNS.

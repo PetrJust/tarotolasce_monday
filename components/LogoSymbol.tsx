@@ -44,24 +44,3 @@ export default function LogoSymbol({
   );
 }
 
-/** Monogram „TOL" z v1 = pečeť na ruby karet + submark patiček (§5.8). */
-export function TolSeal({ size = 16, color }: { size?: number; color?: string }) {
-  const c = color ?? tokens.softGold;
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden>
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke={c} strokeWidth="1" />
-      <text
-        x="12"
-        y="15.2"
-        textAnchor="middle"
-        fontSize="7.5"
-        fontFamily="Lora, serif"
-        fontWeight="600"
-        fill={c}
-        letterSpacing="0.5"
-      >
-        TOL
-      </text>
-    </svg>
-  );
-}
