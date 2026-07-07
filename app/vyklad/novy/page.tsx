@@ -11,7 +11,7 @@ import Link from "next/link";
 import CrisisScreen from "@/components/CrisisScreen";
 import Ritual, { PickedCard } from "@/components/Ritual";
 import ReadingStream from "@/components/ReadingStream";
-import { CardBack } from "@/components/TarotCard";
+import { CardBack, CardFace } from "@/components/TarotCard";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import GooglePayButton from "@/components/GooglePayButton";
@@ -392,22 +392,37 @@ function FlowInner() {
       {(step === "teaser" || step === "folie" || step === "paying" ||
         step === "payment_failed") && (
         <div className="py-10">
-          {/* v1.6 §7.10 rámování. V OCHUTNÁVCE se skutečné karty NEUKAZUJÍ -
-              jen se naznačí, že se karta/karty natáhly (rub nahoru + počet).
-              Názvy a otočení karet patří až do zaplaceného výkladu. */}
+          {/* v1.6 §7.10 rámování. V OCHUTNÁVCE se otočí jen PRVNÍ karta a
+              vždy NORMÁLNĚ (nikdy obráceně) - obrácení se prozradí až
+              v zaplaceném výkladu. Zbytek karet zůstává rubem nahoru. */}
           <h1 className="font-display text-body">Tvůj výklad</h1>
           <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
           <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">
             Tvoje karty
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2" aria-hidden>
-            {cards.map((c, i) => (
-              <CardBack key={c.cardId + i} className="h-24 w-16 drop-shadow-card" />
-            ))}
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            {cards.map((c, i) =>
+              i === 0 ? (
+                // První karta lícem nahoru, ale VŽDY normálně (reversed=false)
+                CARD_BY_ID[c.cardId] ? (
+                  <CardFace
+                    key={c.cardId + i}
+                    card={CARD_BY_ID[c.cardId]}
+                    reversed={false}
+                    className="h-28 w-[74px] drop-shadow-card"
+                  />
+                ) : (
+                  <CardBack key={c.cardId + i} className="h-28 w-[74px] drop-shadow-card" aria-hidden />
+                )
+              ) : (
+                <CardBack key={c.cardId + i} className="h-24 w-16 drop-shadow-card" aria-hidden />
+              )
+            )}
           </div>
           <p className="mt-2 text-sm text-body-dim">
-            Vytáhla sis {kartyAkuzativ(cards.length)}. Otočí se ti v celém
-            výkladu.
+            {cards.length > 1
+              ? `Otočila jsem ti první kartu. Zbylé ${kartyAkuzativ(cards.length - 1)} se otočí po odemčení.`
+              : "Otočila jsem ti kartu. Celý výklad se odemkne níže."}
           </p>
 
           {crisisText ? (
@@ -422,8 +437,11 @@ function FlowInner() {
                   <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
                     Začátek tvého výkladu:
                   </p>
+                  {/* První 1-2 věty jsou vždy vidět. Během fáze „teaser" se
+                      odhalují po slovech; jakmile je celé, drží se plný
+                      úvodní text (i ve fázi fólie/platby). */}
                   <p className="prose-tarot mt-2 whitespace-pre-line text-lg text-body">
-                    {step === "teaser" ? teaserShown : teaser}
+                    {step === "teaser" && teaserShown ? teaserShown : teaser}
                   </p>
                 </>
               )}
