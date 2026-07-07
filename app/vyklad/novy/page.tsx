@@ -322,12 +322,6 @@ function FlowInner() {
   const positions =
     spread === "between_us" ? betweenUsPositions(question) : spreadDef.positions;
 
-  // Mini-nadpisy sekcí pro fólii (5.2: struktura viditelná)
-  const folieSections =
-    spread === "yesno"
-      ? ["Kam se to kloní", "Co s tím", "Na co si dát pozor"]
-      : ["Shrnutí", "Malý krok pro tebe"];
-
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pb-20">
       {step === "question" && (
@@ -455,52 +449,35 @@ function FlowInner() {
               <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
                 Začátek tvého výkladu:
               </p>
-              {/* První 1-2 věty jsou vždy vidět. Během fáze „teaser" se
-                  odhalují po slovech; jakmile je celé, drží se plný
-                  úvodní text (i ve fázi fólie/platby). */}
-              <p className="prose-tarot mt-2 whitespace-pre-line text-lg text-body">
-                {step === "teaser" && teaserShown ? teaserShown : teaser}
-              </p>
+              {/* Úvod výkladu s FADE-OUT: text je nahoře plně čitelný a
+                  plynule přechází do 0 % alpha (mizí do prázdna), takže
+                  poslední řádky ochutnávky nejsou čitelné. Během fáze
+                  „teaser" se odhaluje po slovech; ve fázi platby se drží
+                  celý úvod, ale spodek je vyblednutý maskou. */}
+              {(() => {
+                const introText =
+                  step === "teaser" && teaserShown ? teaserShown : teaser;
+                return (
+                  <p
+                    className="prose-tarot mt-2 whitespace-pre-line text-lg text-body"
+                    style={{
+                      WebkitMaskImage:
+                        "linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)",
+                      maskImage:
+                        "linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)",
+                    }}
+                  >
+                    {introText}
+                  </p>
+                );
+              })()}
 
               {(step === "folie" || step === "paying" || step === "payment_failed") && (
                 <>
-                  {/* OPONA: zbytek výkladu je za nečitelnou clonou. Uvnitř
-                      jsou jen anonymní řádky (ne názvy karet ani pozice) -
-                      naznačují rozsah, neprozrazují obsah. V classic režimu
-                      se opona neukazuje (platba je před výběrem karet). */}
-                  <div
-                    className="relative mt-6 overflow-hidden rounded-2xl border border-surface"
-                    aria-hidden
-                    style={{ display: FLOW_CLASSIC ? "none" : undefined }}
-                  >
-                    <div className="space-y-5 p-6 blur-[6px]">
-                      {cards.slice(1).map((c, i) => (
-                        <div key={c.cardId + i}>
-                          <div className="h-4 w-1/3 rounded bg-body/25" />
-                          <div className="mt-2 space-y-1.5">
-                            <div className="h-3.5 w-full rounded bg-body/15" />
-                            <div className="h-3.5 w-11/12 rounded bg-body/15" />
-                          </div>
-                        </div>
-                      ))}
-                      {folieSections.map((h) => (
-                        <div key={h}>
-                          <div className="h-4 w-1/4 rounded bg-body/25" />
-                          <div className="mt-2 space-y-1.5">
-                            <div className="h-3.5 w-full rounded bg-body/15" />
-                            <div className="h-3.5 w-10/12 rounded bg-body/15" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* neprůhledná opona přes spodní část */}
-                    <div className="pointer-events-none absolute inset-0 bg-surface/80" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center pb-6">
-                      <span className="rounded-full border border-surface bg-surface px-4 py-2 text-sm text-body-dim">
-                        Zbytek výkladu se odemkne po zaplacení
-                      </span>
-                    </div>
-                  </div>
+                  {/* CTA štítek nad platbou */}
+                  <p className="mt-2 text-center text-sm text-body-dim">
+                    Zbytek výkladu se odemkne po zaplacení.
+                  </p>
 
                   {/* 5.3 platební schodiště */}
                   <div className="mt-8 rounded-2xl border border-surface bg-surface p-6">
