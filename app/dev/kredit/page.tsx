@@ -52,6 +52,9 @@ export default function DevKreditPage() {
     commitSha?: string | null;
   };
   const [envDiag, setEnvDiag] = useState<EnvDiag | null>(null);
+  // Přepínač obrácených karet (dodatek v1.6): řídí, jestli výklad může
+  // obsahovat karty vzhůru nohama, nebo je vždy otočí normálně.
+  const [allowReversed, setAllowReversed] = useState<boolean | null>(null);
   async function refreshEnvDiag() {
     try {
       const d = await fetch("/api/dev/env").then((r) => r.json());
@@ -79,10 +82,28 @@ export default function DevKreditPage() {
       setLoggedIn(false);
     }
   }
+  async function refreshReadSettings() {
+    try {
+      const r = await fetch("/api/dev/read-settings").then((x) => x.json());
+      setAllowReversed(r.allowReversed !== false);
+    } catch {
+      setAllowReversed(null);
+    }
+  }
+  async function setReversed(next: boolean) {
+    setAllowReversed(next);
+    await fetch("/api/dev/read-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allowReversed: next }),
+    }).catch(() => {});
+  }
+
   useEffect(() => {
     refreshLocal();
     void refreshServer();
     void refreshEnvDiag();
+    void refreshReadSettings();
   }, []);
 
   // Rychlé přihlášení: request OTP -> devCode -> verify. Funguje jen s
@@ -166,6 +187,50 @@ export default function DevKreditPage() {
         přihlásíš se, koupíš balíček přes API a zůstatek čteš stejně jako
         aplikace. Přepínač viditelnosti balíčků platí jen ve tvém prohlížeči.
       </p>
+
+      {/* Přepínač obrácených karet (dodatek v1.6): ovlivní nově zamíchané
+          výklady. Nastavení se drží v podepsané cookie (per prohlížeč). */}
+      <div className="mt-6 rounded-2xl border border-accent-dim bg-surface p-6">
+        <p className="text-xs uppercase tracking-wider text-body-dim">
+          Obrácené karty ve výkladu
+        </p>
+        <p className="mt-2 text-sm text-body-dim">
+          Určuje, jestli se ve výkladu můžou objevit karty vzhůru nohama, nebo
+          budou všechny otočené normálně. Projeví se na nově zamíchaných
+          výkladech.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setReversed(false)}
+            aria-pressed={allowReversed === false}
+            className={`rounded-xl border px-4 py-2 text-sm ${
+              allowReversed === false
+                ? "border-accent text-body"
+                : "border-surface text-body-dim hover:border-accent-dim"
+            }`}
+          >
+            Všechny karty otočené normálně
+          </button>
+          <button
+            onClick={() => setReversed(true)}
+            aria-pressed={allowReversed === true}
+            className={`rounded-xl border px-4 py-2 text-sm ${
+              allowReversed === true
+                ? "border-accent text-body"
+                : "border-surface text-body-dim hover:border-accent-dim"
+            }`}
+          >
+            Povolit i karty vzhůru nohama
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-body-dim">
+          {allowReversed === null
+            ? "Načítám nastavení…"
+            : allowReversed
+            ? "Aktuálně: obrácené karty jsou povolené (výchozí ~27 %)."
+            : "Aktuálně: všechny karty se otočí normálně."}
+        </p>
+      </div>
 
       {/* Diagnostika env proměnných - co server PRÁVĚ TEĎ vidí */}
       <div className="mt-6 rounded-2xl border border-accent-dim bg-surface p-6">

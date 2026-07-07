@@ -11,6 +11,7 @@ import Link from "next/link";
 import CrisisScreen from "@/components/CrisisScreen";
 import Ritual, { PickedCard } from "@/components/Ritual";
 import ReadingStream from "@/components/ReadingStream";
+import { CardBack } from "@/components/TarotCard";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import GooglePayButton from "@/components/GooglePayButton";
@@ -22,7 +23,7 @@ import { useCreditsEnabled, SHOW_1837_CONSENT, FLOW_CLASSIC } from "@/lib/flags"
 import { logEvent, readingType } from "@/lib/analytics";
 import { QUESTION_CHIPS } from "@/lib/chips";
 import { SPIRIO_URL } from "@/lib/site";
-import { vykladu } from "@/lib/declension";
+import { vykladu, kartyAkuzativ } from "@/lib/declension";
 import {
   getSinglePurchases, bumpSinglePurchases,
   getFirstDone, setFirstDone, getEmail, setEmail as persistEmail,
@@ -391,12 +392,22 @@ function FlowInner() {
       {(step === "teaser" || step === "folie" || step === "paying" ||
         step === "payment_failed") && (
         <div className="py-10">
-          {/* v1.6 §7.10 rámování */}
+          {/* v1.6 §7.10 rámování. V OCHUTNÁVCE se skutečné karty NEUKAZUJÍ -
+              jen se naznačí, že se karta/karty natáhly (rub nahoru + počet).
+              Názvy a otočení karet patří až do zaplaceného výkladu. */}
           <h1 className="font-display text-body">Tvůj výklad</h1>
           <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
-          <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
-          <p className="mt-1 text-body">
-            {cards.map((c) => `${c.name}${c.reversed ? " (obráceně)" : ""}`).join(" · ")}
+          <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">
+            Tvoje karty
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2" aria-hidden>
+            {cards.map((c, i) => (
+              <CardBack key={c.cardId + i} className="h-24 w-16 drop-shadow-card" />
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-body-dim">
+            Vytáhla sis {kartyAkuzativ(cards.length)}. Otočí se ti v celém
+            výkladu.
           </p>
 
           {crisisText ? (
@@ -409,7 +420,7 @@ function FlowInner() {
               {!limitedMsg && (
                 <>
                   <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
-                    Tohle se ve tvém výkladu ukazuje nejsilněji:
+                    Začátek tvého výkladu:
                   </p>
                   <p className="prose-tarot mt-2 whitespace-pre-line text-lg text-body">
                     {step === "teaser" ? teaserShown : teaser}
@@ -425,32 +436,41 @@ function FlowInner() {
                     </p>
                   )}
 
-                  {/* 5.2 FÓLIE: texty rozmazané, STRUKTURA viditelná
-                      (v classic režimu se kostra neukazuje - platba je
-                      před výběrem karet) */}
-                  <div className="relative mt-6" aria-hidden style={{ display: FLOW_CLASSIC ? "none" : undefined }}>
-                    <div className="space-y-5">
-                      {cards.slice(1).map((c) => (
-                        <div key={c.cardId + c.position}>
-                          <p className="text-sm font-semibold text-body">
-                            ✦ {c.name}
-                            {c.reversed ? ", obráceně" : ""} · {c.position}
-                          </p>
-                          <div className="mt-1.5 space-y-1.5">
-                            <div className="h-3.5 w-full rounded bg-surface blur-[5px]" />
-                            <div className="h-3.5 w-11/12 rounded bg-surface blur-[5px]" />
+                  {/* OPONA: zbytek výkladu je za nečitelnou clonou. Uvnitř
+                      jsou jen anonymní řádky (ne názvy karet ani pozice) -
+                      naznačují rozsah, neprozrazují obsah. V classic režimu
+                      se opona neukazuje (platba je před výběrem karet). */}
+                  <div
+                    className="relative mt-6 overflow-hidden rounded-2xl border border-surface"
+                    aria-hidden
+                    style={{ display: FLOW_CLASSIC ? "none" : undefined }}
+                  >
+                    <div className="space-y-5 p-6 blur-[6px]">
+                      {cards.slice(1).map((c, i) => (
+                        <div key={c.cardId + i}>
+                          <div className="h-4 w-1/3 rounded bg-body/25" />
+                          <div className="mt-2 space-y-1.5">
+                            <div className="h-3.5 w-full rounded bg-body/15" />
+                            <div className="h-3.5 w-11/12 rounded bg-body/15" />
                           </div>
                         </div>
                       ))}
                       {folieSections.map((h) => (
                         <div key={h}>
-                          <p className="text-sm font-semibold text-body">{h}</p>
-                          <div className="mt-1.5 space-y-1.5">
-                            <div className="h-3.5 w-full rounded bg-surface blur-[5px]" />
-                            <div className="h-3.5 w-10/12 rounded bg-surface blur-[5px]" />
+                          <div className="h-4 w-1/4 rounded bg-body/25" />
+                          <div className="mt-2 space-y-1.5">
+                            <div className="h-3.5 w-full rounded bg-body/15" />
+                            <div className="h-3.5 w-10/12 rounded bg-body/15" />
                           </div>
                         </div>
                       ))}
+                    </div>
+                    {/* neprůhledná opona přes spodní část */}
+                    <div className="pointer-events-none absolute inset-0 bg-surface/80" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center pb-6">
+                      <span className="rounded-full border border-surface bg-surface px-4 py-2 text-sm text-body-dim">
+                        Zbytek výkladu se odemkne po zaplacení
+                      </span>
                     </div>
                   </div>
 
