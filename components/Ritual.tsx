@@ -39,6 +39,7 @@ export default function Ritual({
   positions,
   onReshuffle,
   onComplete,
+  revealFaces = true,
 }: {
   sessionId: string;
   cardCount: number;
@@ -46,6 +47,10 @@ export default function Ritual({
   // Znovu zamíchá na serveru a vrátí nové sessionId (reálné míchání)
   onReshuffle?: () => Promise<string>;
   onComplete: (cards: PickedCard[]) => void;
+  // FLOW B: v neplacené ochutnávce se karty NESMÍ otočit lícem nahoru
+  // (ani na okamžik). revealFaces=false → po výběru se rovnou předá dál
+  // bez odhalovací flip animace; líce se ukážou až v zaplaceném výkladu.
+  revealFaces?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   const playShuffle = useShuffleSound(true);
@@ -276,6 +281,13 @@ export default function Ritual({
   // --- Reveal ---
   function reveal() {
     if (held.length !== cardCount) return;
+    // FLOW B (revealFaces=false): žádné otáčení lícem nahoru - karty
+    // zůstávají rubem a rovnou předáme dál (líce až po zaplacení).
+    if (!revealFaces) {
+      setPhase("done");
+      onComplete(held.map((h) => h.card));
+      return;
+    }
     setPhase("revealing");
     const stepMs = reducedMotion ? 120 : 500;
     held.forEach((h, i) => {

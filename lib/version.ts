@@ -2,10 +2,10 @@
 // ZVEDNI PŘI KAŽDÉM PŘEDÁNÍ ZIPU: číslo + datum + jednořádkový popis.
 // Git commit doplňuje Vercel automaticky (VERCEL_GIT_COMMIT_SHA přes
 // /api/dev/env), tohle je lidsky čitelná řada nezávislá na gitu.
-export const APP_VERSION = "v1.6.3";
+export const APP_VERSION = "v1.6.4";
 export const APP_VERSION_DATE = "2026-07-06";
 export const APP_VERSION_NOTE =
-  "v1.6.2 + oprava buildu (chybějící import CARD_BY_ID)";
+  "v1.6: ochutnávka karty NIKDY neotočí lícem (bez probliknutí); po zaplacení se ukážou obrázky karet";
 
 // Verzování enginu pro analytiku (v1.5 §7: feedback_submitted nese
 // prompt/model verzi; dashboard sleduje kvalitu per verze).

@@ -376,6 +376,7 @@ function FlowInner() {
             return res.sessionId as string;
           }}
           onComplete={onRitualComplete}
+          revealFaces={FLOW_CLASSIC || (creditsEnabled && credits > 0)}
         />
       )}
 
@@ -624,9 +625,27 @@ function FlowInner() {
           <h1 className="font-display text-body">Tvůj výklad</h1>
           <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
           <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
-          <p className="mt-1 text-body">
-            {cards.map((c) => `${c.name}${c.reversed ? " (obráceně)" : ""}`).join(" · ")}
-          </p>
+          {/* Zaplacený/kreditový výklad: karty lícem nahoru se skutečnou
+              orientací (obrácené se ukážou jako obrácené) + názvy pod nimi */}
+          <div className="mt-2 flex flex-wrap gap-3">
+            {cards.map((c, i) => (
+              <div key={c.cardId + i} className="w-[74px] text-center">
+                {CARD_BY_ID[c.cardId] ? (
+                  <CardFace
+                    card={CARD_BY_ID[c.cardId]}
+                    reversed={c.reversed}
+                    className="h-28 w-[74px] drop-shadow-card"
+                  />
+                ) : (
+                  <CardBack className="h-28 w-[74px] drop-shadow-card" />
+                )}
+                <p className="mt-1 text-xs text-body-dim">
+                  {c.name}
+                  {c.reversed ? " (obráceně)" : ""}
+                </p>
+              </div>
+            ))}
+          </div>
           {creditUsed && (
             <p className="mt-3 text-sm text-body-dim">
               Odemčeno z balíčku · zbývají{" "}
