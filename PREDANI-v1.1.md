@@ -414,3 +414,36 @@ BLOKER §4 zodpovězen v PR-POPIS.md (trojí ANO zatím není → datum launche
 **Zbývá mimo kód:** migrace PostgreSQL (BLOKER), Roman (OP/OOU/wordmark),
 logo SVG přílohy, pixel ID do env, reálný cron ranní pozvánky, slepé
 srovnání 7.2 (lidský juror), Lora potvrzení pohledem, e-mail DNS.
+
+---
+
+# SESSION 7: logo assety dodány + nasazeny (balíček k předání)
+
+Zakladatel dodal tři oficiální SVG (balíček `tarotolasce-balicek-k-predani.md`).
+Barevný audit ověřen: všechny obsahují VÝHRADNĚ #2B1340 (deep-plum) a
+#D4AF37 (soft-gold) — nula starých hexů.
+
+**Nasazeno:**
+- `public/logo/symbol.svg`, `rub-karty.svg`, `favicon-16.svg` — oficiální
+  soubory uložené v repu (zdroj pravdy).
+- **Rub se srdcem** (rub-karty.svg) nasazen jako `CardBack` — přepsán 1:1
+  do components/TarotCard.tsx (viewBox 200×320). Projeví se VŠUDE, kde je
+  rub: vějíř, karta dne, ochutnávka, landing hero, Stories. Kódem
+  generovaný rub (hvězdy/vlastní srdce) nahrazen; heartPath helper zrušen.
+- **Symbol** (symbol.svg) přepsán do components/LogoSymbol.tsx (viewBox
+  120×168) — footer submark, avatary.
+- **Favicon** (favicon-16.svg) nasazen jako app/icon.svg.
+- **Ikona 512** (public/icon-512.svg) přegenerována jako věrný scale-up
+  oficiálního symbolu na blush pozadí (odvození ze symbol.svg dle balíčku,
+  ne vlastní kresba).
+
+**Stále ČEKÁ NA ROMANA (nevyrábět podle vlastní úvahy — pokyn balíčku):**
+- Wordmark „Tarot o Lásce" jako SVG v Loře (v hlavičce appky se zatím
+  vykresluje textem v Loře z kódu — to je OK; SVG potřeba jen pro
+  Stories/OG/avatar).
+- Kruhový avatar (TikTok/IG), OG šablona s taglinem, Stories badge,
+  lockup symbol + wordmark.
+
+**Poznámka (invariant 6):** „nejlepší/největší spirituální aplikace na
+světě" je interní severka, NIKDY nejde do produktu ani do zákaznického
+textu. Drženo mimo appku.

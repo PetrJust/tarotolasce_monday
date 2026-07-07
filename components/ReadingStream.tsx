@@ -31,7 +31,9 @@ export default function ReadingStream({
   onError?: () => void;
 }) {
   const [text, setText] = useState(flowB ? teaser : "");
-  const [started, setStarted] = useState(false);
+  // Ve Flow B je úvod (teaser) hotový obsah - zobrazíme ho hned, ať po
+  // zaplacení nezmizí a plynule na něj naváže pokračování ze serveru.
+  const [started, setStarted] = useState(flowB && !!teaser);
   const [doneLocal, setDoneLocal] = useState(false);
   const ran = useRef(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -77,7 +79,9 @@ export default function ReadingStream({
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        let full = "";
+        // Flow B: pokračování ze serveru NAVAZUJE na úvod - proto full
+        // startuje úvodem, ať se na obrazovce drží celý text od začátku.
+        let full = flowB ? teaser : "";
         let finished = false;
 
         for (;;) {

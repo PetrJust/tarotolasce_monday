@@ -7,7 +7,6 @@
 import { useState } from "react";
 import { Card } from "@/lib/cards";
 import { palette, tokens } from "@/lib/palette";
-import { heartPath } from "@/components/LogoSymbol";
 
 export function CardBack({ className = "" }: { className?: string }) {
   const [imgOk, setImgOk] = useState(true);
@@ -29,48 +28,40 @@ export function CardBack({ className = "" }: { className?: string }) {
 }
 
 function CardBackSvg({ className = "" }: { className?: string }) {
+  // OFICIÁLNÍ rub karty (v1.6 §3, dodáno zakladatelem: public/logo/
+  // rub-karty.svg). Barvy jsou z tokens v3 (deep-plum #2B1340 + soft-gold
+  // #D4AF37), audit čistý. Paths jsou 1:1 přepisem schváleného SVG - žádná
+  // vlastní kresba (dřívější kódem generovaný rub nahrazen).
   return (
     <svg
-      viewBox="0 0 120 200"
-      // Obranná záloha: intrinsic rozměry, kdyby Tailwind třídy z nějakého
-      // důvodu nenaskočily (viz v1.3 hotfix) - SVG spadne na malý pevný
-      // rozměr místo roztažení na celou šířku viewportu.
-      width={120}
-      height={200}
+      viewBox="0 0 200 320"
+      // Obranná záloha: intrinsic rozměry, kdyby Tailwind třídy nenaskočily
+      width={200}
+      height={320}
       style={{ maxWidth: "100%", height: "auto" }}
       className={className}
       role="img"
       aria-label="Rub karty"
     >
-      {/* v1.6 §3: SRDCOVÝ rub. Žádný gradient -
-          plochá noční fialová, soft-gold rám, srdce uprostřed.
-          (Monogram z dřívějška zrušen.) */}
-      <rect width="120" height="200" rx="10" fill={palette.night.DEFAULT} />
-      <rect x="5" y="5" width="110" height="190" rx="7" fill="none" stroke={tokens.softGold} strokeWidth="1.4" />
-      <rect x="10" y="10" width="100" height="180" rx="5" fill="none" stroke={tokens.softGold} strokeWidth="0.7" />
-      {/* Centrální srdce (heartPath ze sdíleného loga) */}
-      <path d={heartPath(60, 100, 60)} fill={tokens.romanticPink} />
-      <path d={heartPath(60, 100, 60)} fill="none" stroke={tokens.softGold} strokeWidth="1.4" />
-      <path d={heartPath(60, 100, 40)} fill="none" stroke={tokens.softGold} strokeWidth="0.7" opacity="0.8" />
-      {/* Malá srdíčka v rozích */}
-      <g opacity="0.85">
-        {[
-          [22, 30],
-          [98, 30],
-          [22, 170],
-          [98, 170],
-        ].map(([x, y], i) => (
-          <path key={i} d={heartPath(x, y, 12)} fill={tokens.softGold} />
-        ))}
-      </g>
-      {/* Tečkovaný geometrický rastr (decentní) */}
-      <g fill={tokens.softGold} opacity="0.4">
-        {Array.from({ length: 5 }).map((_, r) =>
-          Array.from({ length: 3 }).map((_, c) => (
-            <circle key={`${r}-${c}`} cx={36 + c * 24} cy={48 + r * 26} r="0.8" />
-          ))
-        )}
-      </g>
+      <rect fill="#2B1340" x="3" y="3" width="194" height="314" rx="16" />
+      <rect fill="none" stroke="#D4AF37" strokeWidth="2" x="12" y="12" width="176" height="296" rx="11" />
+      <rect fill="none" stroke="#D4AF37" strokeWidth="1" x="18" y="18" width="164" height="284" rx="8" opacity="0.6" />
+      {/* hvězdy nahoře a dole + tečky v rozích */}
+      <path fill="#D4AF37" d="M100 40 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
+      <path fill="#D4AF37" d="M100 258 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
+      <circle fill="#D4AF37" cx="40" cy="46" r="2.2" />
+      <circle fill="#D4AF37" cx="160" cy="46" r="2.2" />
+      <circle fill="#D4AF37" cx="40" cy="274" r="2.2" />
+      <circle fill="#D4AF37" cx="160" cy="274" r="2.2" />
+      {/* centrální srdce (linka, soft-gold) */}
+      <path
+        fill="none"
+        stroke="#D4AF37"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M100 196 C 66 168, 54 146, 54 128 C 54 110, 68 98, 83 98 C 92 98, 98 103, 100 110 C 102 103, 108 98, 117 98 C 132 98, 146 110, 146 128 C 146 146, 134 168, 100 196 Z"
+      />
     </svg>
   );
 }
