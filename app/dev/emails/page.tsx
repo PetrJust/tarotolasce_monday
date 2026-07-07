@@ -191,10 +191,10 @@ export default function DevEmailsPage() {
                     <span className="inline-block rounded-xl bg-night px-5 py-3 text-sm font-medium text-body">
                       {e.cta.label}
                     </span>
-                    <p className="mt-1 text-[11px] text-plum-900/50">{e.cta.href}</p>
+                    <p className="mt-1 text-[11px] text-body-dim">{e.cta.href}</p>
                   </div>
                 )}
-                <p className="mt-6 border-t border-night/15 pt-4 text-[11px] leading-relaxed text-plum-900/55">
+                <p className="mt-6 border-t border-night/15 pt-4 text-[11px] leading-relaxed text-body-dim">
                   {e.footer}
                 </p>
               </div>

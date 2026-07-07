@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CookieBanner from "@/components/CookieBanner";
+import PaletteOverrides from "@/components/PaletteOverrides";
 import { PERSONA_NAME, PERSONA_FULL } from "@/lib/persona";
 
 // v1.5 §3: nadpisy H1/H2/H3 = Lora, tělo a UI = Inter. latin-ext kvůli
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs" className={`${display.variable} ${sans.variable}`}>
       <body className="font-sans antialiased">
+        <PaletteOverrides />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}

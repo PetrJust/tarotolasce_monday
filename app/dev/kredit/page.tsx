@@ -19,6 +19,13 @@ import {
 import { PRICES, PRICE_IDS } from "@/lib/pricing";
 import { announceSessionChange } from "@/lib/useSession";
 import { APP_VERSION, APP_VERSION_DATE, APP_VERSION_NOTE } from "@/lib/version";
+import {
+  PALETTE_TOKENS,
+  applyPaletteOverrides,
+  loadPaletteOverrides,
+  savePaletteOverrides,
+  type PaletteOverrides,
+} from "@/lib/paletteTokens";
 
 const PACKS = [
   { label: "5 výkladů", priceId: PRICE_IDS.pack5, price: PRICES.pack5 },
@@ -55,6 +62,29 @@ export default function DevKreditPage() {
   // Přepínač obrácených karet (dodatek v1.6): řídí, jestli výklad může
   // obsahovat karty vzhůru nohama, nebo je vždy otočí normálně.
   const [allowReversed, setAllowReversed] = useState<boolean | null>(null);
+  // Živý editor palety: overridy CSS proměnných (per prohlížeč, localStorage)
+  const [palette, setPalette] = useState<PaletteOverrides>({});
+  function currentColor(key: string, fallback: string) {
+    return palette[key] ?? fallback;
+  }
+  function changeColor(key: string, value: string) {
+    const next = { ...palette, [key]: value };
+    setPalette(next);
+    applyPaletteOverrides(next);
+    savePaletteOverrides(next);
+  }
+  function resetColor(key: string) {
+    const next = { ...palette };
+    delete next[key];
+    setPalette(next);
+    applyPaletteOverrides(next);
+    savePaletteOverrides(next);
+  }
+  function resetAllColors() {
+    setPalette({});
+    applyPaletteOverrides({});
+    savePaletteOverrides({});
+  }
   async function refreshEnvDiag() {
     try {
       const d = await fetch("/api/dev/env").then((r) => r.json());
@@ -104,6 +134,9 @@ export default function DevKreditPage() {
     void refreshServer();
     void refreshEnvDiag();
     void refreshReadSettings();
+    const ov = loadPaletteOverrides();
+    setPalette(ov);
+    if (Object.keys(ov).length) applyPaletteOverrides(ov);
   }, []);
 
   // Rychlé přihlášení: request OTP -> devCode -> verify. Funguje jen s
@@ -230,6 +263,94 @@ export default function DevKreditPage() {
             ? "Aktuálně: obrácené karty jsou povolené (výchozí ~27 %)."
             : "Aktuálně: všechny karty se otočí normálně."}
         </p>
+      </div>
+
+      {/* Živý editor palety: přepisuje CSS proměnné na :root (per prohlížeč,
+          localStorage). Tailwind i .btn-primary z proměnných čtou, takže
+          změna se projeví v celé appce hned. Reset vrací tokens v3. */}
+      <div className="mt-6 rounded-2xl border border-accent-dim bg-surface p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wider text-body-dim">
+            Editor barev (živě, jen tvůj prohlížeč)
+          </p>
+          <button
+            onClick={resetAllColors}
+            className="text-xs text-accent-soft underline underline-offset-2 hover:text-accent"
+          >
+            Vrátit vše na výchozí
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-body-dim">
+          Naklikej barvu a změna se hned projeví v celé aplikaci. Ukládá se
+          jen u tebe (localStorage) - nikoho jiného to neovlivní a produkci to
+          nemění. „Vrátit" u řádku zruší jednu barvu, tlačítko nahoře všechny.
+        </p>
+
+        <div className="mt-5 space-y-3">
+          {PALETTE_TOKENS.map((t) => {
+            const overridden = palette[t.key] != null;
+            const value = currentColor(t.key, t.default);
+            return (
+              <div key={t.key} className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={value}
+                  onChange={(e) => changeColor(t.key, e.target.value)}
+                  className="h-9 w-12 shrink-0 cursor-pointer rounded border border-surface bg-transparent"
+                  aria-label={`Barva: ${t.label}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-body">
+                    {t.label}
+                    {overridden && (
+                      <span className="ml-2 text-xs text-accent-soft">upraveno</span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-body-dim">{t.hint}</p>
+                </div>
+                <input
+                  type="text"
+                  value={value}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (/^#[0-9a-fA-F]{6}$/.test(v)) changeColor(t.key, v);
+                    else setPalette((p) => ({ ...p, [t.key]: v }));
+                  }}
+                  className="w-24 shrink-0 rounded-lg border border-surface bg-surface-2 px-2 py-1.5 text-xs text-body"
+                  spellCheck={false}
+                />
+                <button
+                  onClick={() => resetColor(t.key)}
+                  disabled={!overridden}
+                  className="shrink-0 text-xs text-accent-soft underline underline-offset-2 hover:text-accent disabled:opacity-40"
+                >
+                  Vrátit
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Živý náhled klíčových prvků */}
+        <div className="mt-5 rounded-xl border border-surface bg-surface-2 p-4">
+          <p className="text-xs uppercase tracking-wider text-body-dim">Náhled</p>
+          <p className="mt-2 text-body">Ukázka textu v deep-plum.</p>
+          <p className="text-body-dim">Ztlumený sekundární text.</p>
+          <p className="mt-1">
+            <a href="#" onClick={(e) => e.preventDefault()} className="text-accent-soft underline underline-offset-2">
+              Textový odkaz
+            </a>{" "}
+            · <span className="text-accent">akcent</span>
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="btn-primary" style={{ minHeight: 44, pointerEvents: "none" }}>
+              Primární tlačítko
+            </span>
+            <span className="rounded-full border-2 border-rose-500 px-4 py-2 text-sm font-bold text-accent-soft">
+              Sekundární
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Diagnostika env proměnných - co server PRÁVĚ TEĎ vidí */}

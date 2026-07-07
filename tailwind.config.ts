@@ -9,12 +9,20 @@ const config: Config = {
     extend: {
       colors: {
         // tokens v3 (v1.5 §3) - třídy drží zavedená jména kvůli rozsahu
-        // migrace, hodnoty jedou z jediného zdroje lib/palette.ts
-        plum: { 900: tokens.deepPlum, disabled: derived.ctaDisabled },
-        blush: { 50: tokens.blush },
-        powder: { 50: tokens.powderPink },
-        rose: { 500: tokens.romanticPink, 700: derived.link },
-        gold: { 600: tokens.softGold },
+        // migrace. Hodnoty jedou přes CSS proměnné (:root v globals.css),
+        // aby šly za běhu přepsat živým editorem v /dev/kredit. Fallback
+        // za var() je původní hex z lib/palette.ts (kdyby var chyběla).
+        plum: {
+          900: `var(--tok-deep-plum, ${tokens.deepPlum})`,
+          disabled: `var(--tok-cta-disabled, ${derived.ctaDisabled})`,
+        },
+        blush: { 50: `var(--tok-blush, ${tokens.blush})` },
+        powder: { 50: `var(--tok-powder-pink, ${tokens.powderPink})` },
+        rose: {
+          500: `var(--tok-romantic-pink, ${tokens.romanticPink})`,
+          700: `var(--tok-link, ${derived.link})`,
+        },
+        gold: { 600: `var(--tok-soft-gold, ${tokens.softGold})` },
         night: palette.night,
         cream: palette.cream,
       },

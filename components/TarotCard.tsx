@@ -43,20 +43,20 @@ function CardBackSvg({ className = "" }: { className?: string }) {
       role="img"
       aria-label="Rub karty"
     >
-      <rect fill="#2B1340" x="3" y="3" width="194" height="314" rx="16" />
-      <rect fill="none" stroke="#D4AF37" strokeWidth="2" x="12" y="12" width="176" height="296" rx="11" />
-      <rect fill="none" stroke="#D4AF37" strokeWidth="1" x="18" y="18" width="164" height="284" rx="8" opacity="0.6" />
+      <rect fill="var(--tok-deep-plum, #2B1340)" x="3" y="3" width="194" height="314" rx="16" />
+      <rect fill="none" stroke="var(--tok-soft-gold, #D4AF37)" strokeWidth="2" x="12" y="12" width="176" height="296" rx="11" />
+      <rect fill="none" stroke="var(--tok-soft-gold, #D4AF37)" strokeWidth="1" x="18" y="18" width="164" height="284" rx="8" opacity="0.6" />
       {/* hvězdy nahoře a dole + tečky v rozích */}
-      <path fill="#D4AF37" d="M100 40 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
-      <path fill="#D4AF37" d="M100 258 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
-      <circle fill="#D4AF37" cx="40" cy="46" r="2.2" />
-      <circle fill="#D4AF37" cx="160" cy="46" r="2.2" />
-      <circle fill="#D4AF37" cx="40" cy="274" r="2.2" />
-      <circle fill="#D4AF37" cx="160" cy="274" r="2.2" />
+      <path fill="var(--tok-soft-gold, #D4AF37)" d="M100 40 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
+      <path fill="var(--tok-soft-gold, #D4AF37)" d="M100 258 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
+      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="40" cy="46" r="2.2" />
+      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="160" cy="46" r="2.2" />
+      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="40" cy="274" r="2.2" />
+      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="160" cy="274" r="2.2" />
       {/* centrální srdce (romantic-pink, ladí s akcenty appky) */}
       <path
-        fill="#E84D9A"
-        stroke="#F6BBD9"
+        fill="var(--tok-romantic-pink, #E84D9A)"
+        stroke="var(--tok-accent-dim, #F6BBD9)"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"

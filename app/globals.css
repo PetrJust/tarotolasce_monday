@@ -7,22 +7,36 @@
   /* Design tokens v1.1 §C + v1.3 §1 (zdroj: lib/palette.ts). Jediná barva
      textu je plum-900 (výjimka: bílý text na primárním CTA); odkazy
      rose-700; akcent rose-500. Invariant 3 (v1.3): v aplikaci neexistuje
-     žádný gradient; primární CTA je plná plum-900 s bílým textem. */
-  --surface-1: #FBEAF2; /* powder-pink boxy (kontrast ověřen 14,3:1) */
+     žádný gradient; primární CTA je plná plum-900 s bílým textem.
+     ŽIVÝ EDITOR (/dev/kredit): tyhle proměnné se dají za běhu přepsat
+     (document.documentElement.style.setProperty). Tailwind i .btn-primary
+     z nich čtou, takže změna se projeví v CELÉ appce. */
+  --tok-deep-plum: #2B1340;
+  --tok-romantic-pink: #E84D9A;
+  --tok-blush: #F7E6EC;
+  --tok-powder-pink: #FBEAF2;
+  --tok-soft-gold: #D4AF37;
+  --tok-link: #A2366C;
+  --tok-accent-dim: #F6BBD9;
+  --tok-text-dim: #5E486B;
+  --tok-cta-disabled: #574566;
+  --tok-surface-border: #F7C7DF;
+
+  --surface-1: var(--tok-powder-pink); /* powder-pink boxy */
   --surface-2: #FFFFFF; /* inputy/plné podklady */
-  --surface-border: #F7C7DF;
-  --text-primary: #2B1340; /* deep-plum, tokens v3 */
-  --text-dim: #5E486B; /* AA 6,7:1 na blush i powder */
-  --accent: #E84D9A; /* romantic-pink */
-  --accent-soft: #A2366C; /* textové odkazy: tmavší romantic-pink, AA 5,3:1 */
-  --accent-dim: #F6BBD9;
+  --surface-border: var(--tok-surface-border);
+  --text-primary: var(--tok-deep-plum);
+  --text-dim: var(--tok-text-dim);
+  --accent: var(--tok-romantic-pink);
+  --accent-soft: var(--tok-link);
+  --accent-dim: var(--tok-accent-dim);
   --input-bg: #FFFFFF;
-  --input-text: #2B1340;
+  --input-text: var(--tok-deep-plum);
   --input-placeholder: rgba(43, 19, 64, 0.45);
 }
 
 body {
-  background: #F7E6EC; /* blush (tokens v3), plochá */
+  background: var(--tok-blush); /* blush, plochá */
   color: var(--text-primary);
   min-height: 100dvh;
   font-size: 17px;
@@ -52,7 +66,7 @@ a { color: inherit; }
    obrazovku (mapa z v1.1 C). Disabled: šedo-švestková s bílým textem
    (5.6:1 = AA). */
 .btn-primary {
-  background: #2B1340; /* deep-plum (tokens v3), jediný zdroj pravdy */
+  background: var(--tok-deep-plum); /* jediný zdroj pravdy */
   color: #FFFFFF;
   border-radius: 22px;
   font-weight: 700;
@@ -68,7 +82,7 @@ a { color: inherit; }
 }
 .btn-primary:hover:not(:disabled) { opacity: 0.92; }
 .btn-primary:disabled {
-  background: #574566; /* odsycená deep-plum, bílý text 8,6:1 = AA */
+  background: var(--tok-cta-disabled); /* odsycená deep-plum */
   box-shadow: none;
   cursor: not-allowed;
 }
