@@ -13,10 +13,13 @@ export default function ThreePaths({
   spread,
   credits,
   singlePurchases,
+  onRestart,
 }: {
   spread: string;
   credits: number;
   singlePurchases: number;
+  // Reset toku na obrazovku nové otázky (bez navigace - stejná route)
+  onRestart?: () => void;
 }) {
   void credits;
   void singlePurchases;
@@ -32,9 +35,15 @@ export default function ThreePaths({
         <p className="mt-1 text-sm text-body-dim">
           Můžeš se zeptat znovu. Nová otázka, nové karty, nový výklad.
         </p>
-        <Link href="/vyklad/novy" className="btn-primary mt-4 w-full sm:w-auto">
-          Položit další otázku
-        </Link>
+        {onRestart ? (
+          <button onClick={onRestart} className="btn-primary mt-4 w-full sm:w-auto">
+            Položit další otázku
+          </button>
+        ) : (
+          <Link href="/vyklad/novy" className="btn-primary mt-4 w-full sm:w-auto">
+            Položit další otázku
+          </Link>
+        )}
         <p className="mt-2 text-xs text-body-dim lining-nums-price">
           Další výklad {PRICES.single} Kč
         </p>

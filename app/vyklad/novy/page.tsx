@@ -67,7 +67,6 @@ function FlowInner() {
   // Flow B stav
   const [teaser, setTeaser] = useState(""); // plný text úvodu ze serveru
   const [teaserShown, setTeaserShown] = useState(""); // postupné odhalování
-  const [limitedMsg, setLimitedMsg] = useState<string | null>(null);
   const [crisisText, setCrisisText] = useState<string | null>(null);
   const [introUsedServer, setIntroUsedServer] = useState(false); // schod f)
   const [processing, setProcessing] = useState(!!params.get("q")?.trim());
@@ -155,6 +154,28 @@ function FlowInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // „Položit další otázku" (7.12): jsme na stejné route, takže navigace
+  // nic neremountuje - musíme stav toku vyčistit ručně.
+  function restartFlow() {
+    setStep("question");
+    setQuestion("");
+    setCards([]);
+    setSessionId("");
+    setReadingId("");
+    setTeaser("");
+    setTeaserShown("");
+    setCrisisText(null);
+    setCreditUsed(false);
+    setProcessing(false);
+    autoStarted.current = true; // ať se znovu nespustí z ?q=
+    countedRef.current = false;
+    teaserEventSent.current = false;
+    void fetchCredits();
+    setSingles(getSinglePurchases());
+    setIsFirst(!getFirstDone());
+    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+  }
+
   async function submitQuestion(raw?: string) {
     const trimmed = (raw ?? question).trim();
     if (!trimmed) return;
@@ -219,11 +240,8 @@ function FlowInner() {
         setStep("teaser");
         return;
       }
-      if (res.status === 429 || data?.limited) {
-        setLimitedMsg(String(data?.message ?? ""));
-        setStep("folie");
-        return;
-      }
+      // Limit ochutnávky uživatele neblokuje - server pošle úvod i tak;
+      // jen se rovnou po úvodu ukáže platba (příznak limited = analytika).
       setTeaser(String(data.teaser ?? ""));
       setTeaserShown("");
       setStep("teaser");
@@ -434,28 +452,18 @@ function FlowInner() {
             </p>
           ) : (
             <>
-              {!limitedMsg && (
-                <>
-                  <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
-                    Začátek tvého výkladu:
-                  </p>
-                  {/* První 1-2 věty jsou vždy vidět. Během fáze „teaser" se
-                      odhalují po slovech; jakmile je celé, drží se plný
-                      úvodní text (i ve fázi fólie/platby). */}
-                  <p className="prose-tarot mt-2 whitespace-pre-line text-lg text-body">
-                    {step === "teaser" && teaserShown ? teaserShown : teaser}
-                  </p>
-                </>
-              )}
+              <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
+                Začátek tvého výkladu:
+              </p>
+              {/* První 1-2 věty jsou vždy vidět. Během fáze „teaser" se
+                  odhalují po slovech; jakmile je celé, drží se plný
+                  úvodní text (i ve fázi fólie/platby). */}
+              <p className="prose-tarot mt-2 whitespace-pre-line text-lg text-body">
+                {step === "teaser" && teaserShown ? teaserShown : teaser}
+              </p>
 
               {(step === "folie" || step === "paying" || step === "payment_failed") && (
                 <>
-                  {limitedMsg && (
-                    <p className="mt-6 rounded-2xl border border-accent-dim bg-surface p-4 text-body">
-                      {limitedMsg}
-                    </p>
-                  )}
-
                   {/* OPONA: zbytek výkladu je za nečitelnou clonou. Uvnitř
                       jsou jen anonymní řádky (ne názvy karet ani pozice) -
                       naznačují rozsah, neprozrazují obsah. V classic režimu
@@ -691,7 +699,7 @@ function FlowInner() {
                 Výklad máš uložený v historii.
               </p>
               {readingId && <ReadingFeedback readingId={readingId} spread={spread} />}
-              <ThreePaths spread={spread} credits={credits} singlePurchases={singles} />
+              <ThreePaths spread={spread} credits={credits} singlePurchases={singles} onRestart={restartFlow} />
             </>
           )}
         </div>

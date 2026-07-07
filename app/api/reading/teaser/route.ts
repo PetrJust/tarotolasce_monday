@@ -32,9 +32,6 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const LIMIT_MSG =
-  "Dnešní ochutnávku už máš. Vrať se zítra, nebo si odemkni dnešní výklad.";
-
 async function handlePOST(req: Request) {
   const { sessionId, question, cards, spread, email } = await req.json().catch(() => ({}));
   if (!sessionId || !Array.isArray(cards) || !cards.length || !spread || !(spread in SPREADS)) {
@@ -62,23 +59,25 @@ async function handlePOST(req: Request) {
   if (payload && sig === hmac(payload)) {
     try { used = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")); } catch {}
   }
+  // Jméno z profilu do ř. 1 (fallback bez oslovení)
+  const name = decodeURIComponent(jar.get("tol_name")?.value ?? "");
+  const { teaser } = mockFlowB(spread as SpreadKey, String(question ?? ""), cards, name);
+
   const key = identity || "anon";
   const already = used[key] === day && used[`sid:${key}`] !== String(sessionId);
-  if (already) {
-    return NextResponse.json({ limited: true, message: LIMIT_MSG }, { status: 429 });
-  }
 
   // Měkký IP limit (best-effort)
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   const rec = ipCounts.get(ip);
-  if (rec && rec.day === day && rec.n >= IP_SOFT_LIMIT) {
-    return NextResponse.json({ limited: true, message: LIMIT_MSG }, { status: 429 });
+  const ipOver = rec && rec.day === day && rec.n >= IP_SOFT_LIMIT;
+
+  // Když je denní ochutnávka vyčerpaná, uživatele NEBLOKUJEME hláškou -
+  // pořád mu ukážeme úvod výkladu a pošleme rovnou k odemčení (celý
+  // výklad si může koupit kdykoli). limited příznak je jen pro analytiku.
+  if (already || ipOver) {
+    return NextResponse.json({ teaser, limited: true });
   }
   ipCounts.set(ip, { day, n: rec && rec.day === day ? rec.n + 1 : 1 });
-
-  // Jméno z profilu do ř. 1 (fallback bez oslovení)
-  const name = decodeURIComponent(jar.get("tol_name")?.value ?? "");
-  const { teaser } = mockFlowB(spread as SpreadKey, String(question ?? ""), cards, name);
 
   // zapiš čerpání dnešní ochutnávky (idempotentní na sessionId - refresh
   // téže ochutnávky limit nespálí podruhé)
