@@ -27,11 +27,11 @@ export default function LogoSymbol({
       <rect fill="none" stroke="#D4AF37" x="10" y="10" width="100" height="148" rx="9" strokeWidth="2.5" />
       {/* hvězdička nahoře */}
       <path fill="#D4AF37" d="M60 24 l2.8 6.4 6.4 2.8 -6.4 2.8 -2.8 6.4 -2.8 -6.4 -6.4 -2.8 6.4 -2.8 z" />
-      {/* srdce (linka, zlatá) */}
+      {/* srdce (romantic-pink, ladí s akcenty appky) */}
       <path
-        fill="none"
-        stroke="#D4AF37"
-        strokeWidth="4"
+        fill="#E84D9A"
+        stroke="#F6BBD9"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M60 116 C 38 98, 30 84, 30 72 C 30 60, 39 52, 49 52 C 55 52, 59 55, 60 60 C 61 55, 65 52, 71 52 C 81 52, 90 60, 90 72 C 90 84, 82 98, 60 116 Z"

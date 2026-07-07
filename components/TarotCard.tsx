@@ -53,11 +53,11 @@ function CardBackSvg({ className = "" }: { className?: string }) {
       <circle fill="#D4AF37" cx="160" cy="46" r="2.2" />
       <circle fill="#D4AF37" cx="40" cy="274" r="2.2" />
       <circle fill="#D4AF37" cx="160" cy="274" r="2.2" />
-      {/* centrální srdce (linka, soft-gold) */}
+      {/* centrální srdce (romantic-pink, ladí s akcenty appky) */}
       <path
-        fill="none"
-        stroke="#D4AF37"
-        strokeWidth="5"
+        fill="#E84D9A"
+        stroke="#F6BBD9"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M100 196 C 66 168, 54 146, 54 128 C 54 110, 68 98, 83 98 C 92 98, 98 103, 100 110 C 102 103, 108 98, 117 98 C 132 98, 146 110, 146 128 C 146 146, 134 168, 100 196 Z"
