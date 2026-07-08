@@ -17,9 +17,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-surface bg-surface-2 backdrop-blur">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-        {/* Wordmark v Loře (v1.5 §5.8); finální schválení [ČEKÁ NA ROMANA] */}
-        <Link href="/" className="font-display text-xl font-semibold tracking-wide text-body">
-          Tarot <span className="text-accent">o Lásce</span>
+        {/* Oficiální wordmark (dodán zakladatelem: public/logo/
+            wordmark-only.png). Nahrazuje textovou verzi v Loře. Výška
+            fixní, šířka dopočítaná dle poměru (504×74). */}
+        <Link href="/" className="flex items-center" aria-label="Tarot o Lásce — domů">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo/wordmark-only.png"
+            alt="Tarot o Lásce"
+            width={504}
+            height={74}
+            className="h-8 w-auto sm:h-9"
+            draggable={false}
+          />
         </Link>
 
         <div className="flex items-center gap-3">

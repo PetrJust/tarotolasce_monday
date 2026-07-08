@@ -447,3 +447,27 @@ Barevný audit ověřen: všechny obsahují VÝHRADNĚ #2B1340 (deep-plum) a
 **Poznámka (invariant 6):** „nejlepší/největší spirituální aplikace na
 světě" je interní severka, NIKDY nejde do produktu ani do zákaznického
 textu. Drženo mimo appku.
+
+---
+
+# SESSION 8: oficiální logo nasazeno + historie opravena
+
+**Logo (wordmark):** zakladatel dodal hlavní logo main.png. Uloženo jako
+public/logo/wordmark.png; odvozeny public/logo/wordmark-only.png (jen
+wordmark, do hlavičky) a public/logo/lockup.png (wordmark + tagline
+„Porozumět lásce. Porozumět sobě.", na landing hero). Header.tsx používá
+wordmark-only místo textové verze v Loře; landing hero má lockup nad
+vějířem. Wordmark tím přestává být [ČEKÁ NA ROMANA] pro použití v appce
+(OG/Stories/avatar odvozeniny stále čekají).
+
+**Historie OPRAVENA (bug „Tahle karta v balíčku není" = 404):** příčinou
+byl serverless split-brain - lib/store ukládá do .data/tmp per-instance,
+takže detail výkladu na jiné instanci vrátil notFound(). Interim řešení
+(do PostgreSQL) stejným vzorem jako ledger/session: lib/cookieReadings.ts
+ukládá KOMPAKTNÍ záznam (otázka, karty, typ, jméno, čas - NE plný text)
+do podepsané cookie tol_readings (posledních 20, HMAC). stream route
+zapisuje cookie přes Set-Cookie; detail /vyklad/[id] i list /api/readings
+čtou primárně z cookie (fallback na server store kvůli DB/starším
+odkazům), text výkladu se v detailu deterministicky REGENERUJE z karet
+mock enginem. Historie nově funguje i bez přihlášení (per zařízení).
+Ověřeno 8/8 (save/find/regenerace/tamper/limit20).

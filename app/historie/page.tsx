@@ -23,18 +23,20 @@ export default function HistoriePage() {
   const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
-    if (!email) return;
+    // Historie funguje i bez přihlášení (podepsaná cookie na zařízení),
+    // takže načítáme vždy - přihlášení jen sjednotí s účtem.
     fetch("/api/readings")
       .then((r) => r.json())
-      .then((d) => setItems(d.readings ?? []));
+      .then((d) => setItems(d.readings ?? []))
+      .catch(() => setItems([]));
   }, [email]);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-12">
       <h1 className="font-display text-body">Tvoje výklady</h1>
 
-      {/* Nepřihlášená (7.13 DOSLOVA) */}
-      {!loading && !email && (
+      {/* Nepřihlášená bez výkladů (7.13 DOSLOVA): pobídka k přihlášení */}
+      {!loading && !email && items && items.length === 0 && (
         <p className="mt-6 text-body-dim">
           Výklady máš zatím uložené na tomto zařízení. Přihlas se e-mailem,
           aby se ti uložily do účtu a mohla ses k nim kdykoliv vrátit.{" "}
@@ -44,7 +46,7 @@ export default function HistoriePage() {
         </p>
       )}
 
-      {/* Prázdná (7.13 DOSLOVA) */}
+      {/* Přihlášená bez výkladů (7.13 DOSLOVA) */}
       {email && items && items.length === 0 && (
         <div className="mt-8 rounded-2xl border border-surface bg-surface p-6">
           <p className="text-body">Zatím tu nemáš žádný výklad.</p>
@@ -57,7 +59,18 @@ export default function HistoriePage() {
         </div>
       )}
 
-      {email && items && items.length > 0 && (
+      {/* Nepřihlášená, ale na zařízení výklady jsou: nenásilná pobídka */}
+      {!email && items && items.length > 0 && (
+        <p className="mt-4 text-sm text-body-dim">
+          Uložené na tomto zařízení.{" "}
+          <Link href="/prihlaseni" className="text-accent-soft underline underline-offset-2">
+            Přihlas se
+          </Link>{" "}
+          a budeš se k nim dostat i odjinud.
+        </p>
+      )}
+
+      {items && items.length > 0 && (
         <ul className="mt-8 space-y-3">
           {items.map((it) => (
             <li key={it.id}>

@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { mockReading, mockFlowB } from "@/lib/mockReadings";
 import { saveReading } from "@/lib/store";
+import { READINGS_COOKIE, addReading, serializeSetCookie } from "@/lib/cookieReadings";
 import { sessionUser } from "@/lib/account";
 import {
   LEDGER_COOKIE, parseLedger, ledgerConsume, ledgerSetCookieHeader,
@@ -71,6 +72,25 @@ async function handlePOST(req: NextRequest) {
     void sendPurchaseEmail(email, `${SITE_URL}/vyklad/${saved.id}`).catch(() => {});
   }
 
+  // Ulož výklad i do podepsané cookie (interim historie do PostgreSQL) -
+  // aby ho jiná serverless instance při otevření detailu spolehlivě našla
+  // (soubor/paměťový store je per-instance ephemerní). Cookie drží jen
+  // kompaktní záznam; text výkladu se v detailu regeneruje z karet.
+  const readingsRaw = cookies().get(READINGS_COOKIE)?.value;
+  const readingsCookieValue = addReading(readingsRaw, {
+    id: saved.id,
+    question: question ?? "",
+    spreadKey: spread,
+    spreadName: SPREADS[spread as SpreadKey].name,
+    name: profileName,
+    cards,
+    createdAt: saved.createdAt,
+  });
+  const readingsCookieHeader = serializeSetCookie(
+    READINGS_COOKIE,
+    readingsCookieValue
+  );
+
   const continuation = streamFrom > 0 ? text.slice(streamFrom) : text;
   const words = continuation.split(" ");
   const encoder = new TextEncoder();
@@ -95,13 +115,14 @@ async function handlePOST(req: NextRequest) {
     },
   });
 
-  const headers: Record<string, string> = {
+  const resHeaders = new Headers({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
-  };
-  if (ledgerCookieHeader) headers["Set-Cookie"] = ledgerCookieHeader;
-  return new Response(stream, { headers });
+  });
+  if (ledgerCookieHeader) resHeaders.append("Set-Cookie", ledgerCookieHeader);
+  resHeaders.append("Set-Cookie", readingsCookieHeader);
+  return new Response(stream, { headers: resHeaders });
 }
 
 export const POST = withApiGuard(handlePOST);

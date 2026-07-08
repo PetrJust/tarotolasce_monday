@@ -1,6 +1,13 @@
-// Uložený výklad (z historie / e-mailu). Server component, čte in-memory store.
+// Uložený výklad (z historie / e-mailu). Server component. Čte z podepsané
+// cookie (interim historie do PostgreSQL) a text výkladu regeneruje z karet
+// mock enginem; fallback na server store (lib/store) kvůli starším odkazům
+// a produkci s DB.
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { getReading } from "@/lib/store";
+import { READINGS_COOKIE, findReading } from "@/lib/cookieReadings";
+import { mockFlowB, mockReading } from "@/lib/mockReadings";
+import { SpreadKey } from "@/lib/spreads";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import { PERSONA_NAME } from "@/lib/persona";
@@ -9,7 +16,50 @@ import { DISCLAIMER } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export default async function SavedReadingPage({ params }: { params: { id: string } }) {
-  const reading = await getReading(params.id);
+  // 1) primárně z podepsané cookie (spolehlivé per prohlížeč na serverless)
+  const cookieReading = findReading(cookies().get(READINGS_COOKIE)?.value, params.id);
+
+  let reading:
+    | {
+        id: string;
+        question: string;
+        spreadKey: string;
+        cards: { cardId: string; name: string; reversed: boolean; position: string }[];
+        text: string;
+        createdAt: number;
+      }
+    | undefined;
+
+  if (cookieReading) {
+    // Text regenerujeme z karet (engine je deterministický). Používáme
+    // stejné jméno jako v době výkladu, ať sedí oslovení v úvodu.
+    const sp = cookieReading.spreadKey as SpreadKey;
+    const text = mockFlowB(sp, cookieReading.question, cookieReading.cards, cookieReading.name).full
+      // pro jistotu fallback, kdyby flowB pro daný spread nedával smysl:
+      || mockReading(sp, cookieReading.question, cookieReading.cards, cookieReading.name);
+    reading = {
+      id: cookieReading.id,
+      question: cookieReading.question,
+      spreadKey: cookieReading.spreadKey,
+      cards: cookieReading.cards,
+      text,
+      createdAt: cookieReading.createdAt,
+    };
+  } else {
+    // 2) fallback na server store (DB v produkci / starší odkazy)
+    const s = await getReading(params.id);
+    if (s) {
+      reading = {
+        id: s.id,
+        question: s.question,
+        spreadKey: s.spreadKey,
+        cards: s.cards,
+        text: s.text,
+        createdAt: s.createdAt,
+      };
+    }
+  }
+
   if (!reading) notFound();
 
   return (
