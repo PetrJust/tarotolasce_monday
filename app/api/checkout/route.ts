@@ -1,18 +1,13 @@
 // MOCK: replace with production (Stripe checkout + webhook).
 // v1.1 §A: cena se určuje SERVER-SIDE. Intro 29 Kč jen jednou na účet
-// (server-side rozhodnutí). Balíčky vyžadují přihlášení a připisují se
-// idempotentně podle paymentIntentId. MOCK stav: podepsaná cookie
-// (lib/cookieLedger.ts - hotfix serverless split-brain); produkce =
-// PostgreSQL ledger (lib/account zůstává referenční implementací + testy).
+// (i z anonymního okna - vazba na e-mail/účet, ne na cookie). Balíčky
+// vyžadují přihlášení (kredit se váže na účet) a připisují se idempotentně
+// přes creditPurchase (paymentIntentId = webhookový ref).
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { sessionUser } from "@/lib/account";
-import {
-  LEDGER_COOKIE, parseLedger, ledgerCredit, serializeLedger, ledgerCookieAttrs,
-} from "@/lib/cookieLedger";
+import { creditPurchase, sessionUser, tryUseIntro } from "@/lib/account";
 import { sendPurchaseEmail } from "@/lib/email";
 import { PRICES } from "@/lib/pricing";
-import { withApiGuard } from "@/lib/apiGuard";
 
 const PRODUCTS: Record<string, { kind: "intro" | "single" | "pack"; credits?: number; price: number }> = {
   price_first_29: { kind: "intro", price: PRICES.first },
@@ -21,7 +16,7 @@ const PRODUCTS: Record<string, { kind: "intro" | "single" | "pack"; credits?: nu
   price_pack20_599: { kind: "pack", credits: 20, price: PRICES.pack20 },
 };
 
-async function handlePOST(req: Request) {
+export async function POST(req: Request) {
   const { email, priceId } = await req.json().catch(() => ({}));
   if (typeof priceId !== "string" || !(priceId in PRODUCTS)) {
     return NextResponse.json({ error: "unknown product" }, { status: 400 });
@@ -31,9 +26,7 @@ async function handlePOST(req: Request) {
   // Balíčky: jen přihlášená (kredit patří účtu, ne zařízení)
   const session = await sessionUser(cookies().get("tol_session")?.value);
   const buyerEmail =
-    product.kind === "pack"
-      ? session?.email
-      : (session?.email ?? (typeof email === "string" ? email : null));
+    product.kind === "pack" ? session?.email : typeof email === "string" ? email : null;
   if (product.kind === "pack" && !buyerEmail) {
     return NextResponse.json({ error: "login_required" }, { status: 401 });
   }
@@ -41,11 +34,10 @@ async function handlePOST(req: Request) {
     return NextResponse.json({ error: "email required" }, { status: 400 });
   }
 
-  const ledger = parseLedger(cookies().get(LEDGER_COOKIE)?.value, buyerEmail);
-
-  // Intro jen jednou - rozhoduje server (mock: flag v podepsané cookie)
+  // Intro jen jednou na účet - rozhoduje server (test A.5)
   if (product.kind === "intro") {
-    if (ledger.introUsed) {
+    const intro = await tryUseIntro(buyerEmail);
+    if (!intro.ok) {
       return NextResponse.json({ error: "intro_used", useSingle: true }, { status: 409 });
     }
   }
@@ -59,25 +51,11 @@ async function handlePOST(req: Request) {
 
   if (product.kind === "pack") {
     // = doručení Stripe webhooku; dvojité doručení připíše jen jednou (A.4)
-    const credited = ledgerCredit(ledger, product.credits!, paymentIntent);
-    const res = NextResponse.json({
-      paymentIntent, balance: credited.balance, price: product.price,
-    });
-    res.cookies.set(LEDGER_COOKIE, serializeLedger(credited), ledgerCookieAttrs());
-    return res;
+    const credited = await creditPurchase(buyerEmail, product.credits!, paymentIntent);
+    return NextResponse.json({ paymentIntent, balance: credited.balance, price: product.price });
   }
 
   // single/intro: e-mail s trvalým odkazem posílá stream route po uložení výkladu
   void sendPurchaseEmail; // (odesílá se po vzniku výkladu, ne tady)
-  const res = NextResponse.json({ paymentIntent, price: product.price });
-  if (product.kind === "intro") {
-    res.cookies.set(
-      LEDGER_COOKIE,
-      serializeLedger({ ...ledger, introUsed: true }),
-      ledgerCookieAttrs()
-    );
-  }
-  return res;
+  return NextResponse.json({ paymentIntent, price: product.price });
 }
-
-export const POST = withApiGuard(handlePOST);

@@ -1,23 +1,14 @@
 "use client";
-// SPIRIO CTA (v1.6 §8). Všechny odkazy na landing spirio.cz.
-// UTM: utm_source=tarotolasce&utm_medium=app&utm_campaign={campaign}
-// campaign ∈ {most-po-vykladu | profil | paticka}. Zpětně: placement
-// „post_reading"→most-po-vykladu, „footer"→paticka, „profil"→profil.
-const CAMPAIGN: Record<string, string> = {
-  post_reading: "most-po-vykladu",
-  cesta10: "most-po-vykladu",
-  footer: "paticka",
-  profil: "profil",
-};
+// 7.6 SPIRIO CTA. UTM: utm_source=tarotolasce&utm_medium=referral
+// &utm_content={spread}_{umisteni}
 export function spirioUrl(spread: string, placement: string): string {
-  const campaign = CAMPAIGN[placement] ?? "paticka";
   const params = new URLSearchParams({
     utm_source: "tarotolasce",
-    utm_medium: "app",
-    utm_campaign: campaign,
+    utm_medium: "referral",
+    utm_campaign: "post_reading",
     utm_content: `${spread}_${placement}`,
   });
-  return `https://spirio.cz?${params.toString()}`;
+  return `https://spirio.cz/landing-TBD?${params.toString()}`;
 }
 
 import { logEvent } from "@/lib/analytics";
@@ -38,21 +29,21 @@ export default function SpirioCTA({
 
   if (prominent) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-accent/60 bg-surface p-6 shadow-card">
-        {/* Spirio linka (plochá rose-500; invariant 3: žádný gradient) */}
-        <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-rose-500" />
+      <div className="relative overflow-hidden rounded-2xl border border-accent/60 bg-surface p-6 shadow-glow">
+        {/* Podpisový Spirio gradient (viz prototyp spirio.cz) */}
+        <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#3B0764] to-[#BE185D]" />
         <h3 className="font-display text-2xl font-semibold text-body">
           Tohle pouto se nerozváže samo.
         </h3>
-        {/* v1.5 §5.5: copy DOSLOVA včetně „právě teď" */}
         <p className="mt-3 text-body-dim">
-          Chceš výklad od skutečné kartářky? Na SPIRIO se můžeš spojit s
-          ověřenými kartářkami a průvodkyněmi právě teď.
+          Karty ti ukázaly, co tě drží. Jestli to chceš doopravdy pustit, živá
+          průvodkyně s tebou projde, co se dnes otevřelo. První výklad 10 minut
+          za 99 Kč, s garancí vrácení peněz.
         </p>
         <a
           href={href}
           onClick={onClick}
-          className="mt-5 inline-block rounded-xl bg-rose-500 px-6 py-3 font-medium text-plum-900 hover:opacity-90"
+          className="mt-5 inline-block rounded-xl bg-gold px-6 py-3 font-medium text-night hover:bg-gold-soft"
         >
           Promluvit si s průvodkyní
         </a>
@@ -65,15 +56,14 @@ export default function SpirioCTA({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-surface bg-surface p-5">
-      {/* Spirio linka (plochá rose-500; invariant 3: žádný gradient) */}
-      <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-rose-500" />
+      {/* Podpisový Spirio gradient (viz prototyp spirio.cz) */}
+      <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#3B0764] to-[#BE185D]" />
       <h3 className="font-display text-xl font-semibold text-body">
         Chceš to probrat s živým člověkem?
       </h3>
-      {/* v1.5 §5.5: copy DOSLOVA včetně „právě teď" */}
       <p className="mt-2 text-sm text-body-dim">
-        Chceš výklad od skutečné kartářky? Na SPIRIO se můžeš spojit s
-        ověřenými kartářkami a průvodkyněmi právě teď.
+        Ověřené průvodkyně na Spirio tě vyslechnou přes chat nebo hovor. První
+        výklad 10 minut za 99 Kč. Když ti nic nedá, peníze ti vrátíme.
       </p>
       <a
         href={href}

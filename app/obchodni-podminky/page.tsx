@@ -42,14 +42,6 @@ export default function Page() {
         Pokud první výklad zákaznici nic nedá, na základě e-mailové žádosti
         vracíme 29 Kč. TODO: podmínky a lhůty garance.
       </p>
-
-      {/* v1.6 §10.2: Reklamace = sekce OP; footer i /reklamace (301) sem
-          míří. Finální text píše zakladatel [ČEKÁ NA ROMANA]. */}
-      <h2 id="reklamace" className="mt-6 scroll-mt-24 font-display text-[30px] leading-[1.15] text-body">6. Reklamace</h2>
-      <p>
-        Reklamace a vrácení peněz řešíme e-mailem na ahoj@tarotolasce.cz.
-        TODO (Roman): úplné znění reklamačního postupu.
-      </p>
     </article>
   );
 }

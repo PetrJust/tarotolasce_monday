@@ -28,40 +28,52 @@ export function CardBack({ className = "" }: { className?: string }) {
 }
 
 function CardBackSvg({ className = "" }: { className?: string }) {
-  // OFICIÁLNÍ rub karty (v1.6 §3, dodáno zakladatelem: public/logo/
-  // rub-karty.svg). Barvy jsou z tokens v3 (deep-plum #2B1340 + soft-gold
-  // #D4AF37), audit čistý. Paths jsou 1:1 přepisem schváleného SVG - žádná
-  // vlastní kresba (dřívější kódem generovaný rub nahrazen).
   return (
     <svg
-      viewBox="0 0 200 320"
-      // Obranná záloha: intrinsic rozměry, kdyby Tailwind třídy nenaskočily
-      width={200}
-      height={320}
-      style={{ maxWidth: "100%", height: "auto" }}
+      viewBox="0 0 120 200"
       className={className}
       role="img"
       aria-label="Rub karty"
     >
-      <rect fill="var(--tok-deep-plum, #2B1340)" x="3" y="3" width="194" height="314" rx="16" />
-      <rect fill="none" stroke="var(--tok-soft-gold, #D4AF37)" strokeWidth="2" x="12" y="12" width="176" height="296" rx="11" />
-      <rect fill="none" stroke="var(--tok-soft-gold, #D4AF37)" strokeWidth="1" x="18" y="18" width="164" height="284" rx="8" opacity="0.6" />
-      {/* hvězdy nahoře a dole + tečky v rozích */}
-      <path fill="var(--tok-soft-gold, #D4AF37)" d="M100 40 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
-      <path fill="var(--tok-soft-gold, #D4AF37)" d="M100 258 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
-      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="40" cy="46" r="2.2" />
-      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="160" cy="46" r="2.2" />
-      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="40" cy="274" r="2.2" />
-      <circle fill="var(--tok-soft-gold, #D4AF37)" cx="160" cy="274" r="2.2" />
-      {/* centrální srdce (romantic-pink, ladí s akcenty appky) */}
-      <path
-        fill="var(--tok-romantic-pink, #E84D9A)"
-        stroke="var(--tok-accent-dim, #F6BBD9)"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M100 196 C 66 168, 54 146, 54 128 C 54 110, 68 98, 83 98 C 92 98, 98 103, 100 110 C 102 103, 108 98, 117 98 C 132 98, 146 110, 146 128 C 146 146, 134 168, 100 196 Z"
-      />
+      <defs>
+        <linearGradient id="backGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={palette.night.soft} />
+          <stop offset="100%" stopColor={palette.night.DEFAULT} />
+        </linearGradient>
+      </defs>
+      <rect width="120" height="200" rx="10" fill="url(#backGrad)" />
+      <rect x="5" y="5" width="110" height="190" rx="7" fill="none" stroke={tokens.gold600} strokeWidth="1.4" />
+      <rect x="10" y="10" width="100" height="180" rx="5" fill="none" stroke={tokens.gold600} strokeWidth="0.7" />
+      {/* Centrální osmicípá hvězda */}
+      <g stroke={tokens.gold600} strokeWidth="1.2" fill="none">
+        <path d="M60 62 L68 92 L98 100 L68 108 L60 138 L52 108 L22 100 L52 92 Z" />
+        <path d="M60 76 L65 95 L84 100 L65 105 L60 124 L55 105 L36 100 L55 95 Z" strokeWidth="0.8" />
+        <circle cx="60" cy="100" r="7" />
+      </g>
+      {/* Srpek měsíce nahoře a dole */}
+      <g fill={tokens.gold600}>
+        <path d="M60 24 a 9 9 0 1 0 0.01 0 M60 27 a 7 7 0 1 1 -0.01 0" fillRule="evenodd" opacity="0.9" />
+        <path d="M60 162 a 9 9 0 1 0 0.01 0 M60 165 a 7 7 0 1 1 -0.01 0" fillRule="evenodd" opacity="0.9" />
+      </g>
+      {/* Rohové hvězdičky */}
+      <g fill={tokens.gold600} opacity="0.85">
+        {[
+          [22, 28],
+          [98, 28],
+          [22, 172],
+          [98, 172],
+        ].map(([x, y], i) => (
+          <path key={i} d={`M${x} ${y - 4} L${x + 1.4} ${y - 1.4} L${x + 4} ${y} L${x + 1.4} ${y + 1.4} L${x} ${y + 4} L${x - 1.4} ${y + 1.4} L${x - 4} ${y} L${x - 1.4} ${y - 1.4} Z`} />
+        ))}
+      </g>
+      {/* Tečkovaný geometrický rastr */}
+      <g fill={tokens.gold600} opacity="0.5">
+        {Array.from({ length: 5 }).map((_, r) =>
+          Array.from({ length: 3 }).map((_, c) => (
+            <circle key={`${r}-${c}`} cx={36 + c * 24} cy={44 + r * 28} r="0.9" />
+          ))
+        )}
+      </g>
     </svg>
   );
 }
@@ -102,16 +114,13 @@ function CardFaceSvg({
   return (
     <svg
       viewBox="0 0 120 200"
-      width={120}
-      height={200}
-      style={{ maxWidth: "100%", height: "auto" }}
       className={className}
       role="img"
       aria-label={`${card.name}${reversed ? ", obráceně" : ""}`}
     >
       <rect width="120" height="200" rx="10" fill={palette.cream.DEFAULT} />
       <rect x="6" y="6" width="108" height="188" rx="7" fill="none" stroke={palette.night.DEFAULT} strokeWidth="1.6" />
-      <rect x="11" y="11" width="98" height="178" rx="4" fill="none" stroke={tokens.softGold} strokeWidth="1" />
+      <rect x="11" y="11" width="98" height="178" rx="4" fill="none" stroke={tokens.gold600} strokeWidth="1" />
       <g transform={reversed ? "rotate(180 60 100)" : undefined}>
         <text
           x="60"
@@ -132,7 +141,7 @@ function CardFaceSvg({
         >
           {card.name.length > 16 ? card.name.slice(0, 15) + "…" : card.name}
         </text>
-        <line x1="28" y1="160" x2="92" y2="160" stroke={tokens.softGold} strokeWidth="0.8" />
+        <line x1="28" y1="160" x2="92" y2="160" stroke={tokens.gold600} strokeWidth="0.8" />
       </g>
     </svg>
   );

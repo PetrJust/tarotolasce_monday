@@ -5,12 +5,12 @@
 // má vlastní moment) → předání nahoru pro streaming výkladu.
 // Animace jen přes transform a opacity. prefers-reduced-motion: rozlet a flip
 // nahrazeny crossfady, struktura a časování zůstávají.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CardBack, CardFace } from "./TarotCard";
 import { CARD_BY_ID } from "@/lib/cards";
 import { useShuffleSound } from "./useShuffleSound";
-import { kartyAkuzativ } from "@/lib/declension";
+import { vyberKaret } from "@/lib/declension";
 
 export type PickedCard = {
   cardId: string;
@@ -39,7 +39,6 @@ export default function Ritual({
   positions,
   onReshuffle,
   onComplete,
-  revealFaces = true,
 }: {
   sessionId: string;
   cardCount: number;
@@ -47,10 +46,6 @@ export default function Ritual({
   // Znovu zamíchá na serveru a vrátí nové sessionId (reálné míchání)
   onReshuffle?: () => Promise<string>;
   onComplete: (cards: PickedCard[]) => void;
-  // FLOW B: v neplacené ochutnávce se karty NESMÍ otočit lícem nahoru
-  // (ani na okamžik). revealFaces=false → po výběru se rovnou předá dál
-  // bez odhalovací flip animace; líce se ukážou až v zaplaceném výkladu.
-  revealFaces?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   const playShuffle = useShuffleSound(true);
@@ -70,146 +65,81 @@ export default function Ritual({
     setSoundOn(!reducedMotion);
   }, [reducedMotion]);
 
-  // --- Geometrie vějíře (v1.1 §E: radiální kolo) ---
-  // Střed kola leží POD spodní hranou kontejneru (cy = výška + ~110 px).
-  // Všechny karty sedí v jediném rotujícím kontejneru: drag/setrvačnost/snap
-  // mění jen jeden transform (60 fps). Tečné natočení vzniká samo z rotace.
-  const [angle, setAngle] = useState(0); // rotace kola ve stupních (<= 0)
-  const angleRef = useRef(0);
-  const velocityRef = useRef(0); // °/frame
+  // --- Geometrie oblouku ---
+  // Karty leží na oblouku; rotace je tangenciální. Posun vějíře = úhlový offset.
+  const [offset, setOffset] = useState(0); // v "krocích karet"
+  const offsetRef = useRef(0);
+  const velocityRef = useRef(0);
   const draggingRef = useRef(false);
-  const movedRef = useRef(0); // rozliší tap od dragu
   const lastXRef = useRef(0);
+  const lastTRef = useRef(0);
   const rafRef = useRef<number | null>(null);
-  const snappingRef = useRef(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const wheelRef = useRef<HTMLDivElement | null>(null);
-  // FIX desktop v2 (report zakladatele: kolo po načtení v rohu, resize
-  // ho spravil = závodní podmínka prvního měření). Strukturální řešení:
-  // šířka startuje jako NULL a karty se NEVYKRESLÍ, dokud není šířka
-  // změřená z živého elementu - žádný fallback na window.innerWidth,
-  // žádný první nástřel se špatnou hodnotou. Měří se synchronně před
-  // vykreslením (useLayoutEffect), znovu v dalším framu (chytí pozdní
-  // layout - fonty, scrollbar) a průběžně přes ResizeObserver.
-  const [vw, setVw] = useState<number | null>(null);
+  const [vw, setVw] = useState(390);
 
-  useLayoutEffect(() => {
-    if (phase !== "picking") return;
-    const el = viewportRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = el.clientWidth;
-      if (w > 0) setVw((prev) => (prev === w ? prev : w));
-    };
-    measure();
-    const raf = requestAnimationFrame(measure); // druhé přeměření po layoutu
-    window.addEventListener("resize", measure);
-    let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      ro = new ResizeObserver(measure);
-      ro.observe(el);
-    }
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measure);
-      ro?.disconnect();
-    };
-  }, [phase]);
-
-  // Změna šířky mění radius/stepDeg -> úhel kola se přepočítá ze stavu,
-  // ať fokusovaná karta sedí uprostřed (jde přes setState, takže render
-  // a transform nikdy nerozjedou).
   useEffect(() => {
-    if (phase !== "picking" || vw === null) return;
-    applyAngle(-focusedIndex * stepDeg, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vw, phase]);
+    const update = () => setVw(viewportRef.current?.clientWidth ?? window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
-  // Geometrie: dokud není změřeno, drž bezpečné mobilní hodnoty (karty
-  // se stejně nevykreslují - viz gate v renderu níže).
-  // FIX desktop v3: horizontální střed kola už NEZÁVISÍ na měřené šířce
-  // vůbec - kotví se čistým CSS left: 50% (centruje vždy, i kdyby měření
-  // vrátilo cokoli). vwSafe zůstává jen pro velikosti karet a poloměr,
-  // kde případná odchylka nic neposune, jen mírně změní křivost.
-  const vwSafe = vw ?? 390;
-  const cardW = vwSafe < 360 ? 44 : vwSafe < 480 ? 52 : 64; // min 44 px = tap cíl
+  // Responzivní geometrie vějíře, ať na mobilu nepřesahuje okraje.
+  // Na úzkém displeji jsou karty i krok menší.
+  const cardW = vw < 360 ? 44 : vw < 480 ? 52 : 64;
   const cardH = Math.round(cardW * 2.5);
-  // Poloměr ~300–340 podle šířky; krok vyladěný na viditelnou hranu
-  // ~24 px (hrana = r * krok_rad), v mezích ~5–6,5°. Finální doladění
-  // kroku/hrany patří na reálné zařízení (checklist E).
-  const radius = Math.min(340, Math.max(300, Math.round(vwSafe * 0.82)));
-  const stepDeg = Math.min(6.5, Math.max(5, (24 / radius) * (180 / Math.PI)));
-  const WINDOW_DEG = 60; // vykresluje se okno ~120° (±60°)
-  const fanH = Math.round(radius + cardH / 2 - 110 + 12);
-  const cy = fanH + 110;
-  const K = 0.35; // °/px (citlivost dragu dle E)
-  const minAngle = -(DECK_SIZE - 1) * stepDeg;
+  const halfW = cardW / 2;
+  // krok = překryv karet; menší displej => menší krok (víc překryvu)
+  const step = Math.max(16, Math.round(cardW * 0.42));
+  const radius = vw * 1.4;
+  // širší okno než jen viditelná část: i po několika výběrech zůstane
+  // dost nevybraných karet v DOM, aby šlo vybrat i poslední (6.) kartu
+  const visibleCount = Math.min(DECK_SIZE, Math.ceil(vw / step) + 16);
 
-  const applyAngle = useCallback((a: number, withTransition: boolean) => {
-    const clamped = Math.max(minAngle, Math.min(0, a));
-    angleRef.current = clamped;
-    const el = wheelRef.current;
-    if (el) {
-      el.style.transition = withTransition ? "transform 0.24s cubic-bezier(0.22,1,0.36,1)" : "none";
-      el.style.transform = `rotate(${clamped}deg)`;
-    }
-    // stav jen pro virtualizaci + fokus (levné, mění se po celých kartách)
-    const idx = Math.round(-clamped / stepDeg);
-    setFocusedIndex((prev) => (prev === idx ? prev : idx));
-    setAngle(clamped);
-  }, [minAngle, stepDeg]);
+  const setOffsetClamped = useCallback(
+    (v: number) => {
+      const max = 0;
+      const min = -(DECK_SIZE - 1) * step;
+      const clamped = Math.max(min, Math.min(max, v));
+      offsetRef.current = clamped;
+      setOffset(clamped);
+    },
+    [step]
+  );
 
-  // Snap na násobek kroku + haptika (E)
-  const snapToNearest = useCallback(() => {
-    const target = -Math.round(-angleRef.current / stepDeg) * stepDeg;
-    if (Math.abs(target - angleRef.current) > 0.01) {
-      snappingRef.current = true;
-      applyAngle(target, true);
-      navigator.vibrate?.(3);
-      setTimeout(() => { snappingRef.current = false; }, 260);
-    }
-  }, [applyAngle, stepDeg]);
-
-  // Setrvačnost: decay ~0,95/frame, pak snap
+  // Momentum scrolling
   const startMomentum = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const tick = () => {
       if (draggingRef.current) return;
-      velocityRef.current *= 0.95;
-      if (Math.abs(velocityRef.current) < 0.04) {
+      velocityRef.current *= 0.94;
+      if (Math.abs(velocityRef.current) < 0.1) {
         velocityRef.current = 0;
-        snapToNearest();
         return;
       }
-      applyAngle(angleRef.current + velocityRef.current, false);
+      setOffsetClamped(offsetRef.current + velocityRef.current);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [applyAngle, snapToNearest]);
-
-  // Dorolování na konkrétní kartu (tap mimo střed, klávesnice)
-  const rollTo = useCallback((i: number) => {
-    velocityRef.current = 0;
-    applyAngle(-i * stepDeg, true);
-    navigator.vibrate?.(3);
-  }, [applyAngle, stepDeg]);
+  }, [setOffsetClamped]);
 
   function onPointerDown(e: React.PointerEvent) {
     if (phase !== "picking") return;
     draggingRef.current = true;
-    movedRef.current = 0;
     lastXRef.current = e.clientX;
+    lastTRef.current = performance.now();
     velocityRef.current = 0;
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
     if (!draggingRef.current) return;
+    const now = performance.now();
     const dx = e.clientX - lastXRef.current;
+    const dt = Math.max(1, now - lastTRef.current);
+    velocityRef.current = dx / dt * 16; // px za snímek
     lastXRef.current = e.clientX;
-    movedRef.current += Math.abs(dx);
-    const dAngle = dx * K; // rotace += dx * k
-    velocityRef.current = dAngle;
-    applyAngle(angleRef.current + dAngle, false);
+    lastTRef.current = now;
+    setOffsetClamped(offsetRef.current + dx);
   }
   function onPointerUp() {
     if (!draggingRef.current) return;
@@ -231,11 +161,8 @@ export default function Ritual({
       setActiveSession(newId);
     }
     setShuffleNonce((n) => n + 1); // přegeneruje vizuální pořadí (rozlet)
-    // vstup do výběru: kolo vystředíme na střed balíčku
-    const mid = Math.floor(DECK_SIZE / 2);
-    setFocusedIndex(mid);
-    angleRef.current = -mid * stepDeg;
-    setAngle(angleRef.current);
+    // vstup do výběru: vějíř vystředíme na střed balíčku (jinak míří mimo okraj)
+    setFocusedIndex(Math.floor(DECK_SIZE / 2));
     setTimeout(
       () => setPhase("picking"),
       reducedMotion ? 200 : 1200
@@ -257,14 +184,14 @@ export default function Ritual({
       });
       if (!res.ok) return;
       const card: PickedCard = await res.json();
-      navigator.vibrate?.(12); // výběr (E)
+      if (navigator.vibrate) navigator.vibrate(10);
       setHeld((h) => [...h, { index, card }]);
     } finally {
       setBusyIndex(null);
     }
   }
 
-  // Krok zpět: vrátí drženou kartu zpět do vějíře (až do „Zobrazit výklad").
+  // Krok zpět: vrátí drženou kartu zpět do vějíře (až do "Otočit karty").
   // Uvolní výběr i na serveru, aby počet i pořadí zůstaly konzistentní.
   function unpick(index: number) {
     if (phase !== "picking") return;
@@ -281,13 +208,6 @@ export default function Ritual({
   // --- Reveal ---
   function reveal() {
     if (held.length !== cardCount) return;
-    // FLOW B (revealFaces=false): žádné otáčení lícem nahoru - karty
-    // zůstávají rubem a rovnou předáme dál (líce až po zaplacení).
-    if (!revealFaces) {
-      setPhase("done");
-      onComplete(held.map((h) => h.card));
-      return;
-    }
     setPhase("revealing");
     const stepMs = reducedMotion ? 120 : 500;
     held.forEach((h, i) => {
@@ -310,27 +230,36 @@ export default function Ritual({
     }, total);
   }
 
-  // --- Klávesnice (E): šipky = krok kola, Enter/mezerník = výběr středu ---
+  // --- Klávesnice: šipky pohyb, Enter výběr ---
   function onKeyDown(e: React.KeyboardEvent) {
     if (phase !== "picking") return;
     if (e.key === "ArrowRight") {
       e.preventDefault();
-      rollTo(Math.min(DECK_SIZE - 1, focusedIndex + 1));
+      setFocusedIndex((i) => Math.min(DECK_SIZE - 1, i + 1));
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
-      rollTo(Math.max(0, focusedIndex - 1));
+      setFocusedIndex((i) => Math.max(0, i - 1));
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      pick(focusedIndex % DECK_SIZE); // logický index balíčku (E)
+      pick(focusedIndex);
     }
   }
 
+  // Drž fokusovanou kartu ve viditelné části vějíře
+  useEffect(() => {
+    if (phase !== "picking") return;
+    const cardCenter = -focusedIndex * step;
+    const target = vw / 2 - halfW + cardCenter;
+    setOffsetClamped(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedIndex, phase]);
+
   const fanFull = held.length >= cardCount;
 
-  // Virtualizace: vykresluje se jen okno ~120° kolem středu
-  const halfWindow = Math.ceil(WINDOW_DEG / stepDeg) + 2;
-  const lo = Math.max(0, focusedIndex - halfWindow);
-  const hi = Math.min(DECK_SIZE, focusedIndex + halfWindow);
+  // Které karty vykreslit (virtualizace ~30 v DOM)
+  const centerIdx = Math.round((-offset + vw / 2 - halfW) / step);
+  const lo = Math.max(0, centerIdx - Math.ceil(visibleCount / 2));
+  const hi = Math.min(DECK_SIZE, centerIdx + Math.ceil(visibleCount / 2));
 
   return (
     <div className="flex min-h-[78dvh] flex-col gap-2">
@@ -338,27 +267,21 @@ export default function Ritual({
       <div className={phase === "picking" ? "flex-none" : "flex-1"}>
         {phase === "intro" && (
           <div className="flex h-full flex-col items-center justify-center gap-8 py-16 text-center">
-            {/* v1.6 §7.7 DOSLOVA (jen placený výklad) */}
-            <p className="mx-auto max-w-md font-display text-3xl font-semibold leading-snug text-body">
-              Na chvíli se zastav.
-            </p>
-            <p className="mx-auto max-w-md text-body-dim">
-              Zůstaň u své otázky. Až budeš připravená, nech Nomi zamíchat
-              karty.
+            <p className="font-display text-3xl font-semibold text-body">
+              Soustřeď se na svou otázku. Nomi zamíchá karty.
             </p>
             <button
               onClick={() => doShuffle(true)}
-              className="btn-primary"
+              className="rounded-xl bg-gold px-8 py-4 text-lg font-medium text-night shadow-glow hover:bg-gold-soft"
             >
               Zamíchat karty
             </button>
-            {/* Nenápadný zvukový přepínač (F.6) */}
             <button
               onClick={() => setSoundOn((s) => !s)}
               aria-pressed={soundOn}
-              className="text-xs text-body-dim/80 hover:text-body"
+              className="text-sm text-body-dim hover:text-body"
             >
-              Zvuk karet: {soundOn ? "zapnutý" : "vypnutý"}
+              Zvuk šustění: {soundOn ? "zapnutý" : "vypnutý"}
             </button>
           </div>
         )}
@@ -381,7 +304,7 @@ export default function Ritual({
                 </motion.div>
               ))}
             </div>
-            <p className="text-body-dim">Karty se míchají jen pro tebe…</p>
+            <p className="text-body-dim">Nomi míchá tvoje karty…</p>
           </div>
         )}
 
@@ -389,20 +312,11 @@ export default function Ritual({
           <div className="py-4">
             {phase === "picking" && (
               <div className="mb-4 text-center">
-                {/* v1.6 §7.8 DOSLOVA */}
                 <p className="font-display text-2xl font-semibold text-body">
-                  Vyber karty
-                </p>
-                <p className="mt-1 text-sm text-body-dim">
-                  Pro tenhle výklad vybereš {kartyAkuzativ(cardCount)}.
-                </p>
-                <p className="mt-1 text-sm text-body-dim">
-                  Nehledej správnou. Vyber ty, které tě přitáhnou.
+                  {vyberKaret(cardCount)}
                 </p>
                 <p className="mt-1 text-sm text-body-dim" aria-live="polite">
-                  {held.length < cardCount
-                    ? `Vyber ještě ${kartyAkuzativ(cardCount - held.length)}.`
-                    : ""}
+                  {held.length} z {cardCount} vybráno
                 </p>
               </div>
             )}
@@ -413,7 +327,7 @@ export default function Ritual({
               const gap = cardCount >= 5 ? 6 : 10;
               const slotW = Math.max(
                 36,
-                Math.min(68, Math.floor((vwSafe - gap * (cardCount + 1)) / cardCount))
+                Math.min(68, Math.floor((vw - gap * (cardCount + 1)) / cardCount))
               );
               const slotH = Math.round(slotW * 1.6);
               return (
@@ -461,7 +375,7 @@ export default function Ritual({
               );
             })()}
 
-            {/* Pozice karet (reveal) */}
+            {/* Pozice rozkladu (reveal) */}
             {(phase === "revealing" || phase === "done") && (
               <Spread
                 held={held}
@@ -479,7 +393,7 @@ export default function Ritual({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={reveal}
-                  className="btn-primary"
+                  className="rounded-xl bg-gold px-8 py-4 text-lg font-medium text-night shadow-glow hover:bg-gold-soft"
                 >
                   Otočit karty
                 </motion.button>
@@ -489,12 +403,12 @@ export default function Ritual({
         )}
       </div>
 
-      {/* ---------- VĚJÍŘ (radiální kolo, E) ---------- */}
+      {/* ---------- VĚJÍŘ (oblouk) ---------- */}
       {phase === "picking" && (
         <div className="flex flex-1 flex-col justify-end">
           <div
             ref={viewportRef}
-            className="relative touch-none select-none overflow-hidden"
+            className="relative h-52 touch-none select-none overflow-hidden"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -505,80 +419,60 @@ export default function Ritual({
             aria-label="Vějíř 78 karet"
             aria-activedescendant={`fan-card-${focusedIndex}`}
             style={{
-              height: fanH,
               filter: fanFull && !reducedMotion ? "brightness(0.5) blur(1px)" : undefined,
               transition: "filter 0.4s",
             }}
           >
-          {/* Jediný rotující kontejner: střed kola pod spodní hranou.
-              GATE: karty se vykreslí až po reálném změření šířky (vw) -
-              první paint tak nikdy nepoužije špatný střed (desktop bug). */}
-          <div
-            ref={wheelRef}
-            className="absolute will-change-transform"
-            style={{
-              left: "50%", // střed VŽDY uprostřed kontejneru (fix v3)
-              top: cy,
-              width: 0,
-              height: 0,
-              transform: `rotate(${angle}deg)`,
-            }}
-          >
-            {vw !== null && Array.from({ length: hi - lo }).map((_, k) => {
-              const i = lo + k;
-              const isHeld = held.some((h) => h.index === i);
-              const focused = i === focusedIndex;
-              const phi = i * stepDeg; // úhel karty v rámci kola
-              // rotate → radiálně ven → vycentrovat; fokus: +12 px po normále,
-              // scale 1.12 (E). Tečné natočení plyne z rotace samotné.
-              const out = radius + (focused ? 12 : 0);
-              return (
-                <AnimatePresence key={i}>
-                  {!isHeld && (
-                    <motion.button
-                      id={`fan-card-${i}`}
-                      role="option"
-                      aria-selected={focused}
-                      aria-label={`Karta ${i + 1} z 78, rubem nahoru${focused ? ", uprostřed" : ""}`}
-                      disabled={fanFull || busyIndex !== null}
-                      onClick={() => {
-                        if (movedRef.current > 8 || snappingRef.current) return; // drag není tap
-                        if (focused) pick(i % DECK_SIZE); // jen střed je vybratelný (E)
-                        else rollTo(i); // tap mimo střed = dorolování
-                      }}
-                      className="absolute left-0 top-0 disabled:pointer-events-none"
-                      style={{
-                        width: cardW,
-                        height: cardH,
-                        minWidth: 44, // tap cíl min. 44x44 (E)
-                        transformOrigin: "0 0",
-                        transform: `rotate(${phi}deg) translateY(${-out}px) translate(-50%, -50%) scale(${focused ? 1.12 : 1})`,
-                        transition: draggingRef.current ? "none" : "transform 0.18s ease-out",
-                        zIndex: focused ? 100 : i,
-                      }}
-                      initial={false}
-                      exit={
-                        reducedMotion
-                          ? { opacity: 0 } // reduced motion: fade bez letu (E)
-                          : { opacity: 0, y: -90, scale: 0.7, transition: { duration: 0.32 } }
-                      }
-                    >
-                      <CardBack
-                        className={`h-full w-full drop-shadow-card ${
-                          focused ? "rounded-xl ring-2 ring-rose-500" : ""
-                        }`}
-                      />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              );
-            })}
-          </div>
+          {Array.from({ length: hi - lo }).map((_, k) => {
+            const i = lo + k;
+            const isHeld = held.some((h) => h.index === i);
+            // pozice na oblouku
+            const x = offset + i * step;
+            const center = vw / 2 - halfW;
+            const dxFromCenter = x - center;
+            const t = dxFromCenter / radius; // úhel (rad, malý)
+            const lift = Math.cos(t) * 18; // karty u kraje níž
+            const rot = (t * 180) / Math.PI * 0.6; // tangenciální natočení
+            const focused = i === focusedIndex;
+            return (
+              <motion.button
+                key={i}
+                id={`fan-card-${i}`}
+                role="option"
+                aria-selected={isHeld}
+                aria-label={`Karta ${i + 1} z 78, rubem nahoru`}
+                disabled={isHeld || fanFull || busyIndex !== null}
+                onClick={() => pick(i)}
+                onFocus={() => setFocusedIndex(i)}
+                className="absolute bottom-2 origin-bottom will-change-transform disabled:pointer-events-none"
+                style={{
+                  left: x,
+                  width: cardW,
+                  height: cardH,
+                  transform: `translateY(${-lift}px) rotate(${rot}deg)`,
+                  zIndex: focused ? 100 : i,
+                  opacity: isHeld ? 0 : 1,
+                }}
+                animate={
+                  focused && !reducedMotion
+                    ? { y: -12, scale: 1.05 }
+                    : { y: 0, scale: 1 }
+                }
+                transition={{ duration: 0.18 }}
+              >
+                <CardBack
+                  className={`h-full w-full drop-shadow-card ${
+                    focused ? "rounded-xl ring-2 ring-gold" : ""
+                  }`}
+                />
+              </motion.button>
+            );
+          })}
 
           {/* Tichý hint, dokud uživatelka nevybere první kartu */}
           {!fanFull && held.length === 0 && (
             <span className="pointer-events-none absolute inset-x-0 bottom-1 z-[60] text-center text-xs text-body-dim/80">
-              Klepni na kartu.
+              Klepni na kartu, nebo táhni pro výběr
             </span>
           )}
           </div>
@@ -588,7 +482,7 @@ export default function Ritual({
             <button
               onClick={() => doShuffle(false)}
               disabled={held.length > 0}
-              className="text-[13px] text-body-dim underline decoration-rose-500/40 underline-offset-4 hover:text-body disabled:no-underline disabled:opacity-35"
+              className="text-[13px] text-body-dim underline decoration-night-line underline-offset-4 hover:text-body disabled:no-underline disabled:opacity-35"
             >
               Zamíchat znovu
             </button>
@@ -599,7 +493,7 @@ export default function Ritual({
   );
 }
 
-// Otočení karet se sekvenčním 3D flipem; obrácená karta má vlastní moment.
+// Rozklad karet s sekvenčním 3D flipem; obrácená karta má vlastní moment.
 function Spread({
   held,
   positions,

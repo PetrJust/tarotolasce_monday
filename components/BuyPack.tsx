@@ -4,20 +4,19 @@
 // Připsání je idempotentní (webhook ref), zůstatek = SUM z ledgeru.
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { logEvent } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
+import { useCreditsEnabled } from "@/lib/flags";
 import { useSession } from "@/lib/useSession";
 import { vykladu } from "@/lib/declension";
 
 export default function BuyPack({
   priceId,
   credits,
-  primary = false, ctaLabel }: {
+}: {
   priceId: string | null;
   credits: number;
-  /** Právě jedna primární akce na obrazovku (invariant 3): na ceníku je
-   * to vstupní karta „První výklad", ostatní tlačítka jsou sekundární. */
-  primary?: boolean; ctaLabel?: string }) {
+}) {
+  const creditsEnabled = useCreditsEnabled();
   const { email, loading } = useSession();
   const router = useRouter();
   const [state, setState] = useState<"idle" | "paying" | "done" | "failed">("idle");
@@ -27,14 +26,12 @@ export default function BuyPack({
     fetch("/api/credits").then((r) => r.json()).then((d) => setBalance(d.balance ?? 0)).catch(() => {});
   }, [state]);
 
-  const secondaryCls =
-    "mt-0 flex w-full items-center justify-center rounded-[22px] border-2 border-rose-500 px-6 py-3 font-bold text-accent-soft hover:border-accent hover:text-accent";
-
   if (!priceId) {
+    // Ceník: primární akce obrazovky = „Položit otázku" (mapa C)
     return (
       <Link
         href="/vyklad/novy"
-        className={primary ? "btn-primary mt-5 w-full" : `${secondaryCls} mt-5`}
+        className="mt-5 block rounded-xl bg-love px-5 py-3 text-center text-plum-900 hover:opacity-90"
       >
         Položit otázku
       </Link>
@@ -64,19 +61,24 @@ export default function BuyPack({
 
   return (
     <div className="mt-5">
-      {/* v1.3 §4: žádný mezistav „Brzy" - balíčky jsou zapojené spolu
-          s ledgerem (na preview přes Stripe test mode). */}
       <button
         onClick={buy}
-        disabled={state === "paying" || loading}
-        className={primary ? "btn-primary w-full" : `${secondaryCls} disabled:opacity-50`}
+        disabled={!creditsEnabled || state === "paying" || loading}
+        className="w-full rounded-xl bg-love px-5 py-3 text-plum-900 hover:opacity-90 disabled:opacity-60 disabled:saturate-[.35]"
       >
-        {state === "paying"
+        {!creditsEnabled
+          ? "Brzy"
+          : state === "paying"
           ? "Zpracovává se…"
           : email
-          ? (ctaLabel ?? "Koupit balíček")
+          ? "Koupit balíček"
           : "Přihlásit se a koupit"}
       </button>
+      {!creditsEnabled && (
+        <p className="mt-2 text-center text-xs text-body-dim">
+          Balíčky spouštíme už brzy. Jednotlivé výklady fungují už teď.
+        </p>
+      )}
       {state === "done" && (
         <p className="mt-2 text-center text-xs text-accent-soft">
           Hotovo, {vykladu(balance)}.

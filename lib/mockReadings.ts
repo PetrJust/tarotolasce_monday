@@ -1,36 +1,31 @@
 // MOCK: replace with production (vlastní AI model na AWS)
-// Výkladový engine v2 dle zadání v1 §6.1 + dikce G (v1.1):
+// Výkladový engine v2 dle zadání v1 §6.1:
 // - struktura: úvod k otázce -> blok na kartu (mini-nadpis) -> syntéza -> krok
 // - ano/ne: směrová odpověď v PRVNÍ větě, disclaimer až potom (6.1.4)
-//   a směr se ZOPAKUJE i v závěru (v1.1 checklist)
-// - bloky karet: 2-3 věty s vazbou na téma otázky (v1.1 H.4)
 // - časové otázky: laskavé přerámování, žádná data (6.1.5)
 // - obrácené karty: konkrétní význam, ne vata (6.1.6)
 // - mimo záběr (zdraví/právo/finance): vztahově-emoční rovina + odborník (6.1.8)
-// - podpis přes PERSONA_NAME (6.1.10, invariant 4)
-// Zákaz: predikce („vrátí se ti"), dlouhé pomlčky, vykřičníky, „vibrace",
-// „vesmír", zdrobněliny, inverzní básnické vzory („Nevyřčená zůstala…").
-// NÁVRH: SAMPLE_* níže jsou přepsané v dikci G a čekají na schválení
-// zakladatelem (původní z 9.2 obsahovaly zakázané vzory).
+// - podpis „Nomi, tvoje AI kartářka" (6.1.10)
+// Zákaz predikcí („vrátí se ti") a dlouhých pomlček platí dál.
+// Ukázkové výklady z 9.2 zůstávají doslovně jako kvalitativní laťka.
 import { CARD_BY_ID } from "./cards";
 import { SpreadKey } from "./spreads";
-import { PERSONA_NAME } from "./persona";
 
 type PickedCard = { cardId: string; name: string; reversed: boolean; position: string };
 
 const SAMPLE_BETWEEN_US =
-  "Tvoje karta je Dvojka pohárů: do vztahu jdeš srdcem napřed a čekáš, že to ucítí sám. Jeho karta je Rytíř pentaklů, muž, který jede pomalu a city ukazuje skutky, ne slovy. Vaše společná karta je Slunce, mezi vámi je pořád opravdové světlo. Problém není láska, ale jazyk, kterým o ní mluvíte. Zkus mu říct, co potřebuješ, ne jen co cítíš.";
+  "Ty cítíš hluboké emoční propojení, jsi v poháru až po okraj. On je ale Rytíř pentaklů: stabilní, ale pomalý, řeší praktické věci místo pocitů. Vaše My je přesto Slunce, mezi vámi je opravdové světlo. Problém není láska, ale jazyk, kterým ji vyjadřujete. Zkus mu příště říct, co potřebuješ, ne co cítíš.";
 
 const SAMPLE_MY_EX =
-  "Mág říká, že vedle něj zůstala schovaná tvoje vlastní síla. Cítila ses malá, i když jsi nebyla. Věž ukazuje pád něčeho, co stálo na slabých základech, a takový pád se nedá odestát. Drží tě Trojka mečů, bolest, kterou se bojíš položit. Pustit potřebuješ Osmičku pohárů, představu, že kdybys vydržela déle, dopadlo by to jinak. Lekce je Poustevník: cesta zpátky vede k tobě, ne k němu. A před tebou stojí Hvězda, naděje, která přijde, jakmile jí uděláš místo. Dnes večer si napiš jednu větu, kterou jsi mu nikdy neřekla. Nemusíš ji posílat.";
+  "Nevyřčená zůstala tvoje vlastní síla. Cítila ses vedle něj malá. Věž říká, že rozchod byl nevyhnutelný, zhroutilo se to, co stálo na nejistých základech. Drží tě Trojka mečů, bolest, kterou se bojíš nechat odejít. Pustit musíš Osmičku pohárů, představu, že kdybys vydržela déle, bylo by to jiné. Lekce je Poustevník: vrátit se k sobě, ne k němu. A co tě čeká? Hvězda. Naděje, která přichází, když uvolníš místo. Dnes večer zkus napsat na papír jednu větu, kterou jsi mu nikdy neřekla. Nemusíš ji posílat.";
 
 const SAMPLE_YESNO =
-  "Karty teď říkají spíš ne. Věž obráceně je pád, který visí ve vzduchu, protože ho oddaluješ. Psát chceš proto, že tě děsí ticho, ne proto, že ti chybí on. Vydrž sedm dní. Jestli budeš chtít napsat i potom, piš s klidem, ne z úzkosti. Takže za karty ještě jednou: teď spíš ne.";
+  "Karty teď ukazují spíš ne. Cítíš, že oddaluješ nevyhnutelné. Chceš kontakt, protože se bojíš ticha, ne protože ho potřebuješ. Zkus vydržet 7 dní. Pokud budeš chtít napsat i potom, piš s klidem, ne z úzkosti.";
 
 const SAMPLE_DAILY_SLUNCE =
-  "Dnes ti svítí Slunce: jasnost a radost, kterých se nemusíš bát. Po těžších dnech přichází světlo a smí se prožít. Malý krok pro dnešek: zavolej někomu, s kým se směješ.";
+  "Dnes se ti otevírá prostor pro radost. Po několika těžkých dnech přichází jasnost. Neutíkej před světlem, dovol si ho prožít. Malý úkol: zavolej dnes někomu, s kým se směješ.";
 
-const SIGNATURE = `${PERSONA_NAME}, tvoje AI kartářka`;
+const SIGNATURE = "Nomi, tvoje AI kartářka";
 
 /* ---------- deterministická variabilita (proti šablonovitosti, 6.2) ---------- */
 function hash(s: string): number {
@@ -124,59 +119,25 @@ function outOfScope(q: string): "zdraví" | "právo či finance" | null {
 }
 
 /* ---------- stavební bloky ---------- */
-function intro(question: string, seed: number, name = ""): string {
+function capital(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function intro(question: string, seed: number): string {
   const q = question.trim();
   const opts = [
     "Podívala jsem se na tvou otázku a karty k ní mluví překvapivě souvisle.",
     "Tvoje otázka má váhu a karty ji nepřecházejí mlčením.",
     "Sedla jsem si nad tvou otázku a tohle z karet vystupuje nejjasněji.",
   ];
-  const base = q ? pick(opts, seed, 1) : "Dnešní karta ti nese krátký vzkaz.";
-  // Jméno z profilu (v1.5 §5.6): oslovení jen když existuje - veškeré
-  // copy musí fungovat i bez jména (fallback bez oslovení).
-  const n = name.trim();
-  return n ? `${n}, ${base.charAt(0).toLowerCase()}${base.slice(1)}` : base;
+  return q ? pick(opts, seed, 1) : "Dnešní karta ti nese krátký vzkaz.";
 }
 
-/* ---------- vazba bloku na téma otázky (v1.1 H.4) ---------- */
-function questionTheme(q: string): string {
-  const t = q.toLowerCase();
-  if (/\bex\b|bývalý|bývalej|rozchod/.test(t)) return "tam, kde řešíš svého ex";
-  if (/ozve|napíše|zavolá|kontakt/.test(t)) return "tam, kde čekáš, jestli se ozve";
-  if (/čekat|vydržet|počkat/.test(t)) return "tam, kde zvažuješ, jestli čekat dál";
-  if (/cítí|miluje|myslí na mě/.test(t)) return "tam, kde se ptáš na jeho city";
-  if (/vrátí|zpátky|znovu spolu/.test(t)) return "tam, kde doufáš v návrat";
-  if (/nový|nového|potkám|přijde/.test(t)) return "tam, kde vyhlížíš nový začátek";
-  if (/odpustit|odpuštění|zrad|podved/.test(t)) return "tam, kde vážíš odpuštění";
-  return "tam, kam míří tvoje otázka";
-}
-
-function questionTie(question: string, seed: number, i: number): string {
-  const theme = questionTheme(question);
-  const opts = [
-    `Nejvíc se to teď ukazuje ${theme}.`,
-    `Čti ji ${theme}: přesně tam má co říct.`,
-    `A ${theme} je to znát ze všeho nejvíc.`,
-  ];
-  return pick(opts, seed, i + 5);
-}
-
-function cardBlock(card: PickedCard, seed: number, i: number, question = ""): string {
+function cardBlock(card: PickedCard, seed: number, i: number): string {
   const c = CARD_BY_ID[card.cardId];
   const name = `${c?.name ?? card.name}${card.reversed ? ", obráceně" : ""}`;
-  // GRAMATICKÁ SHODA (v1.5 §6.3): významy karet jsou směs jmenných frází
-  // („první plody i první trhliny") a celých vět („máš v rukou víc
-  // nástrojů…"). Dřívější uvození „mluví o tom, že je tu X" vyžadovalo
-  // jednotné číslo a rozbíjelo shodu („je tu první plody"). Dvojtečkové
-  // uvození je syntakticky bezpečné pro oba tvary.
-  const lead = pick(
-    ["Tahle karta říká:", "Tady karta ukazuje:", "Karta ti připomíná:"],
-    seed,
-    i + 2
-  );
-  // 2-3 věty: karetní obraz + lidský překlad, druhá věta váže na otázku (H.4)
-  const tie = question.trim() ? ` ${questionTie(question, seed, i)}` : "";
-  return `✦ ${name} · ${card.position}\n${lead} ${cardMeaning(card)}.${tie}`;
+  const lead = pick(["mluví o tom, že je tu", "ukazuje na", "připomíná ti"], seed, i + 2);
+  return `✦ ${name} · ${card.position}\n${capital(lead)} ${cardMeaning(card)}.`;
 }
 
 function synthesis(cards: PickedCard[], seed: number): string {
@@ -203,123 +164,21 @@ function actionStep(seed: number): string {
   return pick(opts, seed, 11);
 }
 
-/* ---------- ano/ne: směr v PRVNÍ větě a ZNOVU v závěru (6.1.4 + v1.1) ---------- */
-function yesNoReading(card: PickedCard, seed: number, question = ""): string {
+/* ---------- ano/ne: směrová odpověď PŘED disclaimerem (6.1.4) ---------- */
+function yesNoReading(card: PickedCard, seed: number): string {
   const lean = card.reversed ? "spíš k ne" : "spíš k ano";
-  const leanShort = card.reversed ? "spíš ne" : "spíš ano";
   const nuance = card.reversed
     ? "Ne proto, že by bylo všechno ztracené, ale proto, že odpověď, kterou hledáš venku, zatím nemáš srovnanou uvnitř."
     : "Ne jako slib, ale jako směr: okolnosti ti nahrávají víc, než si připouštíš.";
   const disclaimer =
     "A jedno upřímné připomenutí: karty neznají budoucnost a já ti ji slibovat nebudu. Ukazují, kde stojíš teď.";
-  // v1.5 §6.2: placená jednokarta má povinnou strukturu „jasný směr +
-  // proč (z karty) + co s tím / na co pozor" - výrazně bohatší než
-  // ranní vzkaz karty dne. Golden set to kontroluje.
-  const caution = card.reversed
-    ? "Na co si dát pozor: obrácená karta často znamená, že první impuls přichází z nejistoty, ne z jasnosti. Nerozhoduj v nejslabší chvíli dne."
-    : "Na co si dát pozor: i dobrá karta neplatí navždy. Směr drž, ale nech si prostor přehodnotit, kdyby se okolnosti změnily.";
   return [
     `Karty se teď kloní ${lean}. ${nuance}`,
-    cardBlock(card, seed, 0, question),
+    cardBlock(card, seed, 0),
     disclaimer,
     actionStep(seed),
-    caution,
-    `Takže ještě jednou, ať to nezapadne: teď je to ${leanShort}.`,
     SIGNATURE,
   ].join("\n\n");
-}
-
-
-/* ---------- FLOW B (v1.6 §5): teaser + kontinuita konstrukcí ----------
- * Zdarma se ukazuje jen ÚVOD (5.1: přijetí otázky se jménem; jméno PRVNÍ
- * karty + jedna konkrétní věta o ní; otevření směru přerušené uprostřed
- * myšlenky pomlčkou). Plný text se STAVÍ TAK, že teaser je jeho přesným
- * prefixem - kontinuita (5.4: teaser ⊂ finál, navazující věta dokončuje
- * přerušenou) je zaručená konstrukcí, ne kontrolou po generaci.
- * V produkci: teaser jde plné generaci jako vstupní prefix promptu. */
-
-function directionOpen(spread: SpreadKey, card: PickedCard, seed: number): { open: string; close: string } {
-  const c = CARD_BY_ID[card.cardId];
-  const name = c?.name ?? card.name;
-  if (spread === "yesno") {
-    const pairs = [
-      { open: `A právě ${name} napovídá, kterým směrem se to celé kloní —`, close: `a taky proč to tak je.` },
-      { open: `A právě ${name} ukazuje, co tvou odpověď doopravdy rozhoduje —`, close: `víc než cokoli, co ti teď běží hlavou.` },
-    ];
-    return pick(pairs, seed, 7);
-  }
-  if (spread === "my_ex") {
-    const pairs = [
-      { open: `A právě ${name} ukazuje, proč se k němu pořád vracíš —`, close: `a kde přesně to v tvém příběhu drží.` },
-      { open: `A právě ${name} otevírá to, co mezi vámi zůstalo nedořešené —`, close: `a co z toho si neseš jen ty sama.` },
-    ];
-    return pick(pairs, seed, 7);
-  }
-  const pairs = [
-    { open: `A právě ${name} ukazuje, co se mezi vámi teď doopravdy děje —`, close: `a proč to na povrchu vypadá jinak.` },
-    { open: `A právě ${name} napovídá, kde se vaše situace zadrhla —`, close: `a odkud se může začít hýbat.` },
-  ];
-  return pick(pairs, seed, 7);
-}
-
-function firstCardSentence(card: PickedCard, seed: number): string {
-  const c = CARD_BY_ID[card.cardId];
-  const name = c?.name ?? card.name;
-  const rev = card.reversed ? ", obráceně" : "";
-  // 5.1 ř. 2: jmenuje první kartu + JEDNA konkrétní věta (důkaz výkladu)
-  return `První karta, kterou sis vytáhla, je ${name}${rev}: ${cardMeaning(card)}.`;
-}
-
-export type FlowBReading = {
-  full: string; // kompletní výklad (teaser je jeho přesný prefix)
-  teaser: string; // to, co se streamuje zdarma (končí uprostřed myšlenky)
-};
-
-export function mockFlowB(
-  spread: SpreadKey,
-  question: string,
-  cards: PickedCard[],
-  name = ""
-): FlowBReading {
-  const seed = hash(
-    "flowb|" + question + "|" + cards.map((c) => c.cardId + (c.reversed ? "r" : "")).join(",")
-  );
-  const n = name.trim();
-  // ř. 1: přijetí otázky (se jménem, existuje-li; bez jména bez oslovení).
-  // „Sedla jsem si nad tvou otázku" je povolená JEN v úvodu (invariant 5).
-  const l1 = n ? `${n}, sedla jsem si nad tvou otázku.` : "Sedla jsem si nad tvou otázku.";
-  const l2 = firstCardSentence(cards[0], seed);
-  const dir = directionOpen(spread, cards[0], seed);
-
-  // Tělo po odemčení: dokončení přerušené věty + standardní stavba
-  // (bloky per karta, syntéza, akční krok, u ano/ne směr + pozor).
-  const bodyParts: string[] = [];
-  if (spread === "yesno") {
-    const card = cards[0];
-    const lean = card.reversed ? "spíš k ne" : "spíš k ano";
-    const leanShort = card.reversed ? "spíš ne" : "spíš ano";
-    bodyParts.push(`Karty se teď kloní ${lean}.`);
-    bodyParts.push(cardBlock(card, seed, 0, question));
-    bodyParts.push(
-      "A jedno upřímné připomenutí: karty neznají budoucnost a já ti ji slibovat nebudu. Ukazují, kde stojíš teď."
-    );
-    bodyParts.push(actionStep(seed));
-    bodyParts.push(
-      card.reversed
-        ? "Na co si dát pozor: obrácená karta často znamená, že první impuls přichází z nejistoty, ne z jasnosti. Nerozhoduj v nejslabší chvíli dne."
-        : "Na co si dát pozor: i dobrá karta neplatí navždy. Směr drž, ale nech si prostor přehodnotit, kdyby se okolnosti změnily."
-    );
-    bodyParts.push(`Takže ještě jednou, ať to nezapadne: teď je to ${leanShort}.`);
-  } else {
-    cards.forEach((c, i) => bodyParts.push(cardBlock(c, seed, i, question)));
-    bodyParts.push(synthesis(cards, seed));
-    bodyParts.push(actionStep(seed));
-  }
-  bodyParts.push(SIGNATURE);
-
-  const teaser = `${l1}\n\n${l2}\n\n${dir.open}`;
-  const full = `${teaser} ${dir.close}\n\n${bodyParts.join("\n\n")}`;
-  return { full, teaser };
 }
 
 /* ---------- hlavní vstup ---------- */
@@ -330,8 +189,7 @@ function matches(cards: PickedCard[], ids: string[]): boolean {
 export function mockReading(
   spread: SpreadKey,
   question: string,
-  cards: PickedCard[],
-  name = ""
+  cards: PickedCard[]
 ): string {
   // doslovné ukázky z 9.2 pro referenční kombinace (kvalitativní laťka)
   if (spread === "between_us" && matches(cards, ["dvojka-pohary", "rytir-pentakly", "slunce"]))
@@ -371,11 +229,11 @@ export function mockReading(
   if (spread === "yesno" && cards[0]) {
     // směrová odpověď musí zůstat první větou samotného výkladu
     const head = parts.length ? parts.join("\n\n") + "\n\n" : "";
-    return head + yesNoReading(cards[0], seed, question);
+    return head + yesNoReading(cards[0], seed);
   }
 
-  if (!parts.length) parts.push(intro(question, seed, name));
-  cards.forEach((c, i) => parts.push(cardBlock(c, seed, i, spread === "daily" ? "" : question)));
+  if (!parts.length) parts.push(intro(question, seed));
+  cards.forEach((c, i) => parts.push(cardBlock(c, seed, i)));
   if (spread !== "daily" && cards.length > 1) parts.push(synthesis(cards, seed));
   parts.push(actionStep(seed));
   parts.push(SIGNATURE);

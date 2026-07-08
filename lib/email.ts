@@ -4,7 +4,6 @@
 // jen funkce deliver() za SES. Jednotný odesílatel, transakční e-maily
 // bez marketingového obsahu.
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { EMAIL_SENDER, PERSONA_NAME } from "./persona";
 import { OPERATOR } from "./site";
@@ -24,7 +23,7 @@ async function deliver(mail: Mail) {
   // MOCK: log + outbox pro /dev/emails
   console.log(`[email] to=${mail.to} subject=${mail.subject}`);
   try {
-    const dir = process.env.TOL_DATA_DIR ?? path.join(os.tmpdir(), "tarotolasce-data");
+    const dir = process.env.TOL_DATA_DIR ?? path.join(process.cwd(), ".data");
     const f = path.join(dir, "outbox.json");
     fs.mkdirSync(dir, { recursive: true });
     let arr: Mail[] = [];
@@ -54,33 +53,12 @@ export async function sendPurchaseEmail(to: string, readingUrl: string) {
     to,
     subject: "Tvůj výklad od AI kartářky " + PERSONA_NAME,
     text: [
-      "Tvůj výklad máš uložený tady:",
+      "Tady je trvalý odkaz na tvůj výklad:",
       readingUrl,
       "",
       "Ke svému účtu se kdykoli přihlásíš kódem - stačí e-mail.",
       "",
       `${OPERATOR}, provozovatel Tarotu o Lásce`,
-    ].join("\n"),
-  });
-}
-
-// v1.6 §6: ranní POZVÁNKA (bez karty a vzkazu, jen link na otočení).
-// Odeslání se loguje jako daily_invite_sent (v produkci cron; tady mock).
-// Proklik na otočení se loguje na /karta-dne přes ?from=invite.
-export async function sendDailyInvite(to: string, jmeno = "") {
-  const oslov = jmeno.trim() ? ` ${jmeno.trim()}` : "";
-  // MOCK analytika: daily_invite_sent (server-side event)
-  console.log(`[analytics] daily_invite_sent to=${to}`);
-  await deliver({
-    to,
-    subject: "Tvoje karta dne na tebe čeká",
-    text: [
-      `Dobré ráno${oslov},`,
-      "tvoje dnešní karta je zamíchaná a čeká, až ji otočíš.",
-      "",
-      "Otočit dnešní kartu: https://tarotolasce.cz/karta-dne?from=invite",
-      "",
-      "Odhlásit ranní pozvánku můžeš kdykoli v profilu.",
     ].join("\n"),
   });
 }

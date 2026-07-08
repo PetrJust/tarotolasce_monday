@@ -22,7 +22,7 @@ export const INTENTS: IntentPage[] = [
       "Rovnou na začátek poctivě: žádné karty ti nepoví, co udělá druhý člověk. To neví nikdo, ani on sám. Co ale karty umí, je ukázat ti, co se děje v tobě. Proč na něj pořád myslíš, co mezi vámi zůstalo nedořešené a co potřebuješ ty, ať už se vrátí, nebo ne.",
     ],
     howTarotHelps: [
-      "Tarot je nástroj reflexe. Výklad Já a můj ex prochází šest míst tvého příběhu: co zůstalo nevyřčené, proč se to stalo, co tě stále drží, co musíš pustit, jakou lekci si odnášíš a co tě čeká, když uvolníš místo.",
+      "Tarot je nástroj reflexe. Rozklad Já a můj ex prochází šest míst tvého příběhu: co zůstalo nevyřčené, proč se to stalo, co tě stále drží, co musíš pustit, jakou lekci si odnášíš a co tě čeká, když uvolníš místo.",
       "Nejde o věštbu. Jde o to, podívat se na vlastní situaci z odstupu, pojmenovat, co cítíš, a najít první malý krok. Někdy je to úleva. Někdy je to aha moment. Vždycky je to chvíle jen pro tebe.",
     ],
     faq: [
@@ -46,13 +46,13 @@ export const INTENTS: IntentPage[] = [
     h1: "Co ke mně cítí?",
     title: "Co ke mně cítí? Tarotový výklad o vztahu",
     description:
-      "Když nevíš, na čem jsi. Tarotový výklad Jak to mezi námi je ti pomůže podívat se na vztah z odstupu a pojmenovat, co se mezi vámi děje.",
+      "Když nevíš, na čem jsi. Tarotový rozklad Jak to mezi námi je ti pomůže podívat se na vztah z odstupu a pojmenovat, co se mezi vámi děje.",
     intro: [
       "Nejistota je jedna z nejtěžších věcí ve vztahu. Číst zprávy pořád dokola, hledat významy mezi řádky, nevědět, na čem jsi. Pokud to znáš, tahle stránka je pro tebe.",
       "Karty neumí nahlédnout do hlavy druhého člověka. Co umí, je pomoct ti srovnat si, co vidíš, co cítíš a co si možná jen přeješ vidět. To je často přesně to, co potřebuješ, aby ses mohla rozhodnout, jak dál.",
     ],
     howTarotHelps: [
-      "Výklad Jak to mezi námi je má tři karty: Já, On a My. Podíváš se na svoji energii ve vztahu, na to, jak se jeví jeho strana, a na to, co tvoříte spolu.",
+      "Rozklad Jak to mezi námi je má tři karty: Já, On a My. Podíváš se na svoji energii ve vztahu, na to, jak se jeví jeho strana, a na to, co tvoříte spolu.",
       "Výsledkem není verdikt, ale zrcadlo. Často ti dojde něco, co jsi vlastně věděla, jen sis to ještě neřekla nahlas.",
     ],
     faq: [
@@ -82,7 +82,7 @@ export const INTENTS: IntentPage[] = [
       "Tahle otázka většinou není o něm. Je o tom, co se děje v tobě: jestli píšeš z klidu, nebo z úzkosti. A přesně na to se umí podívat jedna karta.",
     ],
     howTarotHelps: [
-      "Výklad Ano/Ne pro srdce je jedna karta a jedna odpověď. Ne příkaz, ale impuls k zastavení. Karta ti ukáže, jaká energie tvoji otázku právě teď doprovází.",
+      "Rozklad Ano/Ne pro srdce je jedna karta a jedna odpověď. Ne příkaz, ale impuls k zastavení. Karta ti ukáže, jaká energie tvoji otázku právě teď doprovází.",
       "Někdy je odpověď spíš ano: piš, ale s klidem. Někdy spíš ne: počkej, až nebude rozhodovat úzkost. V obou případech rozhodnutí zůstává na tobě.",
     ],
     faq: [

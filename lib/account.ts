@@ -11,23 +11,9 @@
 //    na adresu a 15/hod na IP, identická odpověď pro ne/existující e-mail
 import crypto from "crypto";
 import fs from "fs";
-import os from "os";
 import path from "path";
 
-// HOTFIX: Vercel serverless funkce mají souborový systém JEN PRO ČTENÍ
-// kromě /tmp. Původní výchozí cesta (process.cwd()/.data) tam byla
-// nezapisovatelná -> každý zápis (přihlášení, OTP, kredit) shodil funkci
-// s neošetřenou chybou a prohlížeč viděl prázdnou 500 odpověď.
-// os.tmpdir() se na Vercelu resolvuje na /tmp (zapisovatelné), lokálně na
-// běžný systémový temp adresář (taky zapisovatelný) - funguje všude bez
-// nutnosti cokoli nastavovat. TOL_DATA_DIR pořád jde přebít explicitně
-// (např. v testech), přednost má vždycky ta proměnná.
-//
-// POZOR: /tmp na serverless funkcích je EFEMÉRNÍ - při "studeném startu"
-// (nová instance funkce) se vynuluje. Pro testování OTP/nákupu v jedné
-// souvislé session to stačí, ale žádná data se takhle trvale neuchovají.
-// Skutečná perzistence = migrace na PostgreSQL (schema.sql, v1.1 §I/TODO C).
-const DATA_DIR = process.env.TOL_DATA_DIR ?? path.join(os.tmpdir(), "tarotolasce-data");
+const DATA_DIR = process.env.TOL_DATA_DIR ?? path.join(process.cwd(), ".data");
 const FILE = path.join(DATA_DIR, "account.json");
 
 type User = {
@@ -98,50 +84,6 @@ function tx<T>(fn: (db: Db) => T): Promise<T> {
 const id = () => crypto.randomBytes(12).toString("hex");
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 const norm = (e: string) => e.trim().toLowerCase();
-
-/* ---------------- bezstavové sessions (hotfix serverless) ----------------
- * PŮVODNÍ PROBLÉM: session tokeny ležely v souboru v /tmp. Vercel ale
- * obsluhuje každý požadavek potenciálně JINOU instancí funkce s vlastním
- * /tmp -> jeden požadavek uživatelku viděl přihlášenou a druhý ne
- * (split-brain: badge s kredity + zároveň „Ještě nejsi přihlášená").
- * ŘEŠENÍ: token nese e-mail v sobě a je podepsaný HMAC - žádné úložiště,
- * ověří ho KAŽDÁ instance. Formát: v1.<b64url(email)>.<expMs>.<podpis>.
- * V produkci s PostgreSQL se vrátí serverové sessions (schema.sql). */
-const SESSION_SECRET = process.env.SESSION_SECRET ?? "tol-mock-session-secret";
-const SESSION_TTL_MS = 90 * 86400 * 1000; // v1.5 §5.10: 90 dní
-const b64url = (s: string) => Buffer.from(s, "utf8").toString("base64url");
-const unb64url = (s: string) => Buffer.from(s, "base64url").toString("utf8");
-const hmac = (s: string) =>
-  crypto.createHmac("sha256", SESSION_SECRET).update(s).digest("base64url");
-
-export function signSessionToken(email: string): string {
-  const em = norm(email);
-  const exp = Date.now() + SESSION_TTL_MS;
-  const payload = `${b64url(em)}.${exp}`;
-  return `v1.${payload}.${hmac(payload)}`;
-}
-
-export function parseSessionToken(token: string): { email: string } | null {
-  const parts = token.split(".");
-  if (parts.length !== 4 || parts[0] !== "v1") return null;
-  const payload = `${parts[1]}.${parts[2]}`;
-  const sig = parts[3];
-  const expected = hmac(payload);
-  if (
-    sig.length !== expected.length ||
-    !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
-  ) {
-    return null;
-  }
-  const exp = Number(parts[2]);
-  if (!Number.isFinite(exp) || Date.now() > exp) return null;
-  try {
-    const email = unb64url(parts[1]);
-    return email.includes("@") ? { email: norm(email) } : null;
-  } catch {
-    return null;
-  }
-}
 
 /* ---------------- users ---------------- */
 export function getOrCreateUser(db: Db, email: string): User {
@@ -252,21 +194,6 @@ export async function requestOtp(email: string, purpose: string, ip: string) {
   });
 }
 
-/** v1.3 §5: TESTOVACÍ režim (preview/lokálně, NIKDY produkce - hlídá
- * deploy check i volající route). Přepíše hash posledního aktivního OTP
- * na pevný TEST_OTP_CODE, aby šel zadat bez čtení e-mailu. Všechny
- * ostatní limity (TTL, pokusy, zámek) platí beze změny. */
-export async function overrideOtpCode(email: string, purpose: string, code: string) {
-  return tx((db) => {
-    const em = norm(email);
-    const otp = db.otps
-      .filter((o) => o.email === em && o.purpose === purpose && !o.supersededAt && !o.usedAt)
-      .sort((a, b) => b.createdAt - a.createdAt)[0];
-    if (otp) otp.codeHash = sha(code);
-    return { ok: true as const };
-  });
-}
-
 export type VerifyResult =
   | { ok: true; sessionToken?: string }
   | { ok: false; error: "invalid" | "expired" | "locked"; attemptsLeft?: number };
@@ -294,21 +221,15 @@ export async function verifyOtp(email: string, purpose: string, code: string, cr
     u.emailVerifiedAt = u.emailVerifiedAt ?? Date.now(); // = ověření, žádný extra krok
     if (purpose === "daily_card_optin") u.dailyOptInAt = Date.now();
     if (!createSession) return { ok: true as const };
-    // Bezstavový podepsaný token (viz komentář u signSessionToken)
-    return { ok: true as const, sessionToken: signSessionToken(u.email) };
+    const token = crypto.randomBytes(24).toString("hex");
+    db.sessions.push({ token, userId: u.id, createdAt: Date.now() });
+    return { ok: true as const, sessionToken: token };
   });
 }
 
 /* ---------------- sessions ---------------- */
 export async function sessionUser(token: string | undefined | null) {
   if (!token) return null;
-  // 1) bezstavový podepsaný token (funguje napříč serverless instancemi)
-  const stateless = parseSessionToken(token);
-  if (stateless) {
-    // userId deterministicky z e-mailu - ledger/refs drží konzistenci
-    return { userId: sha(stateless.email).slice(0, 24), email: stateless.email };
-  }
-  // 2) legacy tokeny ze souborového úložiště (lokální vývoj před hotfixem)
   return tx((db) => {
     const s = db.sessions.find((x) => x.token === token);
     if (!s) return null;
@@ -318,8 +239,6 @@ export async function sessionUser(token: string | undefined | null) {
 }
 export async function destroySession(token: string | undefined | null) {
   if (!token) return;
-  // Bezstavový token se „ničí" smazáním cookie (dělá route); tady jen
-  // úklid případného legacy záznamu v souboru.
   return tx((db) => {
     db.sessions = db.sessions.filter((s) => s.token !== token);
   });

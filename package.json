@@ -4,12 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/deploy-check.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "deploy-check": "node scripts/deploy-check.mjs"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "framer-motion": "^11.2.0",

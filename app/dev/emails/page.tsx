@@ -32,42 +32,30 @@ const EMAILS: EmailTpl[] = [
     footer: FOOTER_TRANSACTIONAL,
   },
   {
-    id: "transactional-otp",
+    id: "transactional-magiclink",
     group: "Transakční",
-    subject: "Tvůj kód pro Tarot o Lásce: {kod}",
-    preheader: "Platí deset minut a jen jednou.",
-    body: [
-      "Tady je tvůj přihlašovací kód. Platí deset minut a jen jednou.",
-      "Kód najdeš v předmětu tohohle e-mailu, nemusíš nic hledat.",
-      "Pokud sis ho nevyžádala, klidně tenhle e-mail ignoruj.",
-    ],
-    footer: FOOTER_TRANSACTIONAL,
-  },
-  {
-    id: "transactional-purchase",
-    group: "Transakční",
-    subject: "Tvůj výklad od AI kartářky {persona}",
-    preheader: "Tvůj výklad máš uložený.",
+    subject: "Tvůj přihlašovací odkaz",
+    preheader: "Platí 7 dní. Žádné heslo nepotřebuješ.",
     body: [
       "Ahoj,",
-      "tady je trvalý odkaz na tvůj výklad. Nikam nezmizí a uvidíš ho jen ty.",
-      "Ke svému účtu se kdykoli přihlásíš kódem - stačí e-mail.",
+      "tady je tvůj přihlašovací odkaz do Tarotu o Lásce. Platí 7 dní a můžeš ho použít jen ty.",
+      "Pokud sis o něj nepožádala, tenhle e-mail klidně ignoruj. Nic se nestane.",
     ],
-    cta: { label: "Otevřít můj výklad", href: "https://tarotolasce.cz/vyklad/{id}" },
+    cta: { label: "Přihlásit se", href: "https://tarotolasce.cz/prihlaseni?token={token}" },
     footer: FOOTER_TRANSACTIONAL,
   },
   {
-    // v1.5 §5.2: ranní e-mail = POZVÁNKA - neobsahuje kartu ani vzkaz,
-    // jen link na otočení (jméno karty se dozví až na webu)
     id: "daily-card",
     group: "Karta dne",
-    subject: "Tvoje karta dne na tebe čeká",
-    preheader: "Jedno klepnutí a víš, co ti dnes karty říkají.",
+    subject: "Tvoje dnešní karta: {karta}",
+    preheader: "Krátký vzkaz pro tvůj den.",
     body: [
-      "Dobré ráno{jmeno_s_carkou},",
-      "tvoje dnešní karta je zamíchaná a čeká, až ji otočíš.",
+      "Dobré ráno,",
+      "dnešní karta pro tebe je {karta}.",
+      "{kratky_vyklad_karty_dne}",
+      "Jestli dnes nosíš v hlavě něco vlastního, karty jsou ti k dispozici.",
     ],
-    cta: { label: "Otočit dnešní kartu", href: "https://tarotolasce.cz/karta-dne" },
+    cta: { label: "Otevřít kartu dne", href: "https://tarotolasce.cz/karta-dne" },
     footer: FOOTER_MARKETING,
   },
   // Sekvence A: po prvním zaplaceném výkladu
@@ -115,7 +103,7 @@ const EMAILS: EmailTpl[] = [
     id: "seq-b-d1",
     group: "Sekvence B (nedokončený výklad) · D+1",
     subject: "Tvoje karty jsou pořád připravené",
-    preheader: "Otázka i karty na tebe čekají.",
+    preheader: "Otázka i rozklad na tebe čekají.",
     body: [
       "Ahoj,",
       "včera ses ptala: „{otazka}“. K výkladu nakonec nedošlo, ale tvoje karty jsou pořád zamíchané a připravené.",
@@ -177,7 +165,7 @@ export default function DevEmailsPage() {
                   Preheader: {e.preheader}
                 </p>
               </div>
-              <div className="bg-cream px-6 py-6 text-plum-900">
+              <div className="bg-cream px-6 py-6 text-night">
                 <p className="font-display text-lg font-semibold">
                   Tarot <span className="text-accent-dim">o Lásce</span>
                 </p>
@@ -191,10 +179,10 @@ export default function DevEmailsPage() {
                     <span className="inline-block rounded-xl bg-night px-5 py-3 text-sm font-medium text-body">
                       {e.cta.label}
                     </span>
-                    <p className="mt-1 text-[11px] text-body-dim">{e.cta.href}</p>
+                    <p className="mt-1 text-[11px] text-night/50">{e.cta.href}</p>
                   </div>
                 )}
-                <p className="mt-6 border-t border-night/15 pt-4 text-[11px] leading-relaxed text-body-dim">
+                <p className="mt-6 border-t border-night/15 pt-4 text-[11px] leading-relaxed text-night/55">
                   {e.footer}
                 </p>
               </div>

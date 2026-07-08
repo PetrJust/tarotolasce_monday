@@ -53,7 +53,7 @@ function shuffleDeck(seed: number): ShuffledCard[] {
 }
 
 export function createSession(spread: SpreadKey): RitualSession {
-  // Typ výkladu kódujeme za tečku (klíče obsahují podtržítko, např. my_ex),
+  // Rozklad kódujeme za tečku (klíče rozkladů obsahují podtržítko, např. my_ex),
   // aby se dal spolehlivě vyparsovat při deterministické rekonstrukci.
   const id = `s.${spread}.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
   const session: RitualSession = {
@@ -72,8 +72,8 @@ export function getSession(id: string): RitualSession | undefined {
   if (!s && (id.startsWith("s.") || id.startsWith("s_"))) {
     // Deterministická rekonstrukce: pořadí závisí jen na sessionId,
     // takže stejná session vrací stejné pořadí i po restartu serveru.
-    // Typ je zakódovaný v id za tečkou (s.{spread}.…). Starší id s
-    // podtržítkem zkusíme rozpoznat porovnáním se známými klíči typů.
+    // Rozklad je zakódovaný v id za tečkou (s.{spread}.…). Starší id s
+    // podtržítkem zkusíme rozpoznat porovnáním se známými klíči rozkladů.
     let spreadFromId: string | undefined;
     if (id.startsWith("s.")) {
       spreadFromId = id.split(".")[1];

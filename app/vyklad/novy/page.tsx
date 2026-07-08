@@ -1,9 +1,6 @@
 "use client";
-// FLOW B (v1.6 §5 - NEJVYŠŠÍ PRIORITA): otázka → „Na chvíli se zastav"
-// → míchání → vějíř → výběr karet → ÚVOD ZDARMA (teaser) → fólie
-// s platebním schodištěm → platba → zbytek výkladu NAVÁŽE přesně tam,
-// kde úvod skončil → Co dál. Staré flow (platba před rituálem) zůstává
-// za flagem FLOW_CLASSIC (default off).
+// Hlavní flow (kapitola 5): otázka → moderace → klasifikace → checkout
+// → platba (mock) → rituál → streamovaný výklad → 3 cesty.
 // Aplikační stránka, noindex (viz layout v této složce).
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -11,22 +8,16 @@ import Link from "next/link";
 import CrisisScreen from "@/components/CrisisScreen";
 import Ritual, { PickedCard } from "@/components/Ritual";
 import ReadingStream from "@/components/ReadingStream";
-import { CardBack, CardFace } from "@/components/TarotCard";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
-import GooglePayButton from "@/components/GooglePayButton";
+import { spirioUrl } from "@/components/SpirioCTA";
 import { SPREADS, SpreadKey, betweenUsPositions } from "@/lib/spreads";
-import { CARD_BY_ID } from "@/lib/cards";
 import { PRICES, PRICE_IDS } from "@/lib/pricing";
-import { moderate } from "@/lib/moderation";
-import { classify, categorize } from "@/lib/classifier";
-import { useCreditsEnabled, SHOW_1837_CONSENT, FLOW_CLASSIC } from "@/lib/flags";
-import { logEvent, readingType } from "@/lib/analytics";
-import { QUESTION_CHIPS } from "@/lib/chips";
-import { SPIRIO_URL } from "@/lib/site";
-import { vykladu, kartyAkuzativ } from "@/lib/declension";
+import { vykladu } from "@/lib/declension";
+import { useCreditsEnabled } from "@/lib/flags";
+import { logEvent } from "@/lib/analytics";
 import {
-  getSinglePurchases, bumpSinglePurchases,
+  getCredits, setCredits, getSinglePurchases, bumpSinglePurchases,
   getFirstDone, setFirstDone, getEmail, setEmail as persistEmail,
   bumpReadingCount,
 } from "@/lib/clientState";
@@ -34,19 +25,15 @@ import {
 type Step =
   | "question"
   | "crisis_a" | "crisis_b" | "crisis_c"
-  | "ritual"
-  | "loadingTeaser"
-  | "teaser"        // úvod se streamuje zdarma
-  | "folie"         // fólie + platební schodiště
+  | "checkout"
   | "paying"
   | "payment_failed"
-  | "reading"       // pokračování po odemčení (nebo celý při kreditu)
+  | "ritual"
+  | "reading"
   | "reading_error"
   | "paths";
 
-// Platební schod (5.3): a) první nákup · b) vracející se · c) 3. nákup
-// v měsíci (tichá řádka navíc) · d) kredit (fólie se nezobrazuje)
-type Stair = "a" | "b" | "c" | "d";
+const SUGGESTIONS = ["Miluje mě?", "Mám mu odpustit?", "Přijde někdo nový?"];
 
 function FlowInner() {
   const creditsEnabled = useCreditsEnabled();
@@ -54,9 +41,10 @@ function FlowInner() {
   const [step, setStep] = useState<Step>("question");
   const [question, setQuestion] = useState(params.get("q") ?? "");
   const [spread, setSpread] = useState<Exclude<SpreadKey, "daily">>("between_us");
+  const [showSpreadPicker, setShowSpreadPicker] = useState(false);
   const [email, setEmail] = useState("");
   const [emailConfirmed, setEmailConfirmed] = useState(false);
-  const [consent, setConsent] = useState(!SHOW_1837_CONSENT);
+  const [consent, setConsent] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [cards, setCards] = useState<PickedCard[]>([]);
   const [readingId, setReadingId] = useState("");
@@ -64,31 +52,26 @@ function FlowInner() {
   const [singles, setSingles] = useState(0);
   const [isFirst, setIsFirst] = useState(true);
   const [creditUsed, setCreditUsed] = useState(false);
-  // Flow B stav
-  const [teaser, setTeaser] = useState(""); // plný text úvodu ze serveru
-  const [teaserShown, setTeaserShown] = useState(""); // postupné odhalování
-  const [crisisText, setCrisisText] = useState<string | null>(null);
-  const [introUsedServer, setIntroUsedServer] = useState(false); // schod f)
+  // Otázka přišla z úvodní stránky (?q=) → zpracovat rovnou, neukazovat
+  // formulář podruhé. processing drží mezistav, než se rozhodne další krok.
   const [processing, setProcessing] = useState(!!params.get("q")?.trim());
   const autoStarted = useRef(false);
-  const countedRef = useRef(false);
-  const teaserEventSent = useRef(false);
+  const countedRef = useRef(false); // výklad se počítá jen jednou
+  // Platforma pro brandované platební tlačítko (v1 §5): nikdy obě naráz
   const [isApplePlatform, setIsApplePlatform] = useState(false);
   useEffect(() => {
     setIsApplePlatform(/Mac|iPhone|iPad|iPod/.test(navigator.userAgent));
   }, []);
-
-  // Aktuální schod ceníku (5.3) - pro copy i eventy
-  const stair: Stair = creditUsed || (creditsEnabled && credits > 0)
-    ? "d"
-    : (!isFirst || introUsedServer)
-    ? singles >= 2 ? "c" : "b"
-    : "a";
-
-  const payDisabled = !consent || step === "paying" ||
-    (stair === "a" && !email.includes("@"));
-
-  // Našeptávač e-mailových domén (HOTOVO, v1 §3.3.2)
+  const payDisabled = !consent || !email.includes("@") || step === "paying";
+  const paywallSeen = useRef(false);
+  useEffect(() => {
+    if (step === "checkout" && !paywallSeen.current) {
+      paywallSeen.current = true;
+      logEvent("paywall_view", { spread });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+  // Našeptávač e-mailových domén + oprava překlepů (v1 §3.3.2)
   const emailSuggestion = (() => {
     const at = email.indexOf("@");
     if (at < 1) return null;
@@ -108,586 +91,486 @@ function FlowInner() {
     return null;
   })();
 
-  async function fetchCredits(): Promise<number> {
-    try {
-      const r = await fetch("/api/credits").then((x) => x.json());
-      const b = typeof r.balance === "number" ? r.balance : 0;
-      setCreditsState(b);
-      return b;
-    } catch {
-      setCreditsState(0);
-      return 0;
-    }
-  }
-
   useEffect(() => {
-    void fetchCredits();
+    setCreditsState(getCredits());
     setSingles(getSinglePurchases());
     setIsFirst(!getFirstDone());
     const saved = getEmail();
     if (saved) {
       setEmail(saved);
       setEmailConfirmed(true);
-    } else {
-      // Po přihlášení kódem zná e-mail server (session) - převezmeme ho
-      fetch("/api/auth/session")
-        .then((r) => r.json())
-        .then((s) => {
-          if (s?.email) {
-            persistEmail(s.email);
-            setEmail(s.email);
-            setEmailConfirmed(true);
-          }
-        })
-        .catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Otázka z úvodní stránky (?q=) → zpracovat rovnou
+  // Automaticky zpracuj otázku z úvodní stránky (jen jednou)
   useEffect(() => {
     const q = params.get("q")?.trim();
     if (q && !autoStarted.current) {
       autoStarted.current = true;
-      void submitQuestion(q);
+      submitQuestion(q).finally(() => setProcessing(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // „Položit další otázku" (7.12): jsme na stejné route, takže navigace
-  // nic neremountuje - musíme stav toku vyčistit ručně.
-  function restartFlow() {
-    setStep("question");
-    setQuestion("");
-    setCards([]);
-    setSessionId("");
-    setReadingId("");
-    setTeaser("");
-    setTeaserShown("");
-    setCrisisText(null);
-    setCreditUsed(false);
-    setProcessing(false);
-    autoStarted.current = true; // ať se znovu nespustí z ?q=
-    countedRef.current = false;
-    teaserEventSent.current = false;
-    void fetchCredits();
-    setSingles(getSinglePurchases());
-    setIsFirst(!getFirstDone());
-    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
-  }
-
-  async function submitQuestion(raw?: string) {
-    const trimmed = (raw ?? question).trim();
+  async function submitQuestion(q: string) {
+    const trimmed = q.trim();
     if (!trimmed) return;
     setQuestion(trimmed);
-    setProcessing(true);
-
-    // Moderace (krizová odpověď se NIKDY nezamyká za fólii - inv. 8)
-    const mod = moderate(trimmed);
-    if (mod !== "ok") {
-      setStep(mod);
-      setProcessing(false);
+    // 2. Moderace (neviditelná)
+    const mod = await fetch("/api/moderate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: trimmed }),
+    }).then((r) => r.json());
+    if (mod.status !== "ok") {
+      setStep(mod.status as Step);
       return;
     }
-    const cls = classify(trimmed);
+    // 3. Klasifikace (neviditelná)
+    const cls = await fetch("/api/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: trimmed }),
+    }).then((r) => r.json());
     setSpread(cls.spread);
-    setProcessing(false);
-    if (FLOW_CLASSIC) {
-      // Staré flow za flagem (5.5): platba PŘED rituálem, bez teaseru
-      setStep("folie");
+    // Má kredit z balíčku → bez platby. Pokud už známe e-mail, jdeme rovnou
+    // do rituálu; jinak zobrazíme odlehčený checkout jen pro e-mail a souhlas
+    // (bez platebních tlačítek). Kredit se strhne až při vydání výkladu (7.5).
+    if (creditsEnabled && getCredits() > 0 && getEmail()) {
+      await startRitual(cls.spread);
       return;
     }
-    await startRitual(cls.spread);
+    setStep("checkout");
   }
 
-  async function startRitual(sp?: SpreadKey) {
+  async function pay() {
+    if (!consent || !email.includes("@")) return;
+    // Má kredit z balíčku → bez platby
+    if (creditsEnabled && credits > 0) {
+      persistEmail(email);
+      await startRitual(spread);
+      return;
+    }
+    setStep("paying");
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        priceId: isFirst ? PRICE_IDS.first : PRICE_IDS.single,
+      }),
+    });
+    if (!res.ok) {
+      setStep("payment_failed");
+      return;
+    }
+    logEvent("payment_success", {
+      spread,
+      product: isFirst ? "intro" : "single",
+    });
+    persistEmail(email);
+    if (isFirst) setFirstDone();
+    else {
+      bumpSinglePurchases();
+      setSingles((s) => s + 1);
+    }
+    await startRitual();
+  }
+
+  async function startRitual(useSpread?: typeof spread) {
+    const sp = useSpread ?? spread;
     const res = await fetch("/api/session/shuffle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ spread: sp ?? spread }),
+      body: JSON.stringify({ spread: sp }),
     }).then((r) => r.json());
     setSessionId(res.sessionId);
     setStep("ritual");
   }
 
-  // Po výběru karet („Zobrazit výklad"): kredit → rovnou celý výklad;
-  // jinak teaser (úvod zdarma)
-  async function onRitualComplete(picked: PickedCard[]) {
+  function onRitualComplete(picked: PickedCard[]) {
     setCards(picked);
-    if (FLOW_CLASSIC) {
-      setStep("reading");
-      return;
-    }
-    if (creditsEnabled && credits > 0) {
-      // 5.3 d) fólie se nezobrazuje - výklad celý, kredit strhne server
+    const current = getCredits();
+    if (current > 0) {
+      // Kredit se strhává až při vydání výkladu; při chybě se vrací (7.5)
+      setCredits(current - 1);
+      setCreditsState(current - 1);
       setCreditUsed(true);
-      setStep("reading");
-      return;
     }
-    setStep("loadingTeaser");
-    try {
-      const res = await fetch("/api/reading/teaser", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId, question, spread, cards: picked,
-          email: emailConfirmed ? email : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data?.crisis) {
-        setCrisisText(String(data.teaser ?? ""));
-        setStep("teaser");
-        return;
-      }
-      // Limit ochutnávky uživatele neblokuje - server pošle úvod i tak;
-      // jen se rovnou po úvodu ukáže platba (příznak limited = analytika).
-      setTeaser(String(data.teaser ?? ""));
-      setTeaserShown("");
-      setStep("teaser");
-    } catch {
-      setStep("reading_error");
-    }
-  }
-
-  // Teaser: postupné odhalování po slovech (úvod „se streamuje")
-  useEffect(() => {
-    if (step !== "teaser" || crisisText) return;
-    if (!teaserEventSent.current) {
-      teaserEventSent.current = true;
-      logEvent("teaser_shown", { type: readingType(spread), stair });
-      logEvent("question_category", {
-        category: categorize(question), paid: false,
-      });
-    }
-    const words = teaser.split(" ");
-    let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setTeaserShown(words.slice(0, i).join(" "));
-      if (i >= words.length) {
-        clearInterval(id);
-        // po dostreamování úvodu nastoupí fólie
-        setTimeout(() => setStep("folie"), 450);
-      }
-    }, 46);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
-
-  async function unlock() {
-    if (payDisabled) return;
-    logEvent("unlock_click", { type: readingType(spread), stair });
-    setStep("paying");
-    const wantFirst = stair === "a" && !introUsedServer;
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email || undefined,
-        priceId: wantFirst ? PRICE_IDS.first : PRICE_IDS.single,
-      }),
-    });
-    if (res.status === 409) {
-      // 5.3 f) e-mail už nakupoval → server přepíná na 49 Kč
-      setIntroUsedServer(true);
-      setIsFirst(false);
-      setStep("folie");
-      return;
-    }
-    if (!res.ok) {
-      setStep("payment_failed");
-      return;
-    }
-    persistEmail(email);
-    if (wantFirst) setFirstDone();
-    else bumpSinglePurchases();
-    setSingles(getSinglePurchases());
-    logEvent("paid", {
-      type: readingType(spread), stair,
-      product: wantFirst ? "intro" : "single",
-    });
-    logEvent("question_category", {
-      category: categorize(question), paid: true,
-    });
-    if (FLOW_CLASSIC) {
-      await startRitual();
-      return;
-    }
-    // Odemčení musí působit okamžitě: stream pokračování startuje hned
     setStep("reading");
   }
 
   const spreadDef = SPREADS[spread];
   const positions =
     spread === "between_us" ? betweenUsPositions(question) : spreadDef.positions;
+  const price = isFirst ? PRICES.first : PRICES.single;
 
-  return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-20">
-      {step === "question" && (
-        <div className="py-12">
-          {processing ? (
-            <p className="py-16 text-center text-body-dim">Načítám…</p>
-          ) : (
-            <>
-              {/* v1.6 §7.6 DOSLOVA */}
-              <h1 className="font-display text-body">
-                Napiš otázku vlastními slovy.
-              </h1>
-              <p className="mt-2 text-body-dim">Nomi ti vyloží karty.</p>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Napiš otázku vlastními slovy…"
-                rows={3}
-                className="mt-6 w-full rounded-2xl border border-surface bg-surface-2 p-4 text-body"
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {QUESTION_CHIPS.map((chip) => (
+  // ---------- KROK: OTÁZKA ----------
+  if (step === "question") {
+    // Otázka přišla z úvodní stránky a právě se zpracovává → krátký mezistav,
+    // ne formulář podruhé.
+    if (processing) {
+      return (
+        <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 py-12 text-center">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-gold" />
+          <p className="font-display text-2xl text-body">Připravuji tvé karty…</p>
+        </div>
+      );
+    }
+    return (
+      <div className="py-12">
+        <h1 className="font-display text-[42px] leading-[1.1] font-semibold text-body">
+          Na co se chceš zeptat?
+        </h1>
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          rows={3}
+          placeholder="Napiš otázku vlastními slovy…"
+          className="mt-6 w-full rounded-2xl border border-surface bg-surface p-4 text-lg text-body placeholder:text-body-dim/60 focus:border-accent"
+        />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => submitQuestion(s)}
+              className="rounded-full border border-surface px-4 py-2 text-sm text-body-dim hover:border-accent-dim hover:text-body"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => submitQuestion(question)}
+          disabled={!question.trim()}
+          className="mt-8 w-full rounded-xl bg-gold px-6 py-4 text-lg font-medium text-night hover:bg-gold-soft disabled:opacity-40 sm:w-auto"
+        >
+          Pokračovat ke kartám
+        </button>
+      </div>
+    );
+  }
+
+  // ---------- KRIZOVÉ OBRAZOVKY ----------
+  if (step === "crisis_a" || step === "crisis_b" || step === "crisis_c") {
+    return (
+      <CrisisScreen
+        variant={step}
+        spirioHref={spirioUrl("none", "krize")}
+        onBack={() => {
+          setQuestion("");
+          setStep("question");
+        }}
+      />
+    );
+  }
+
+  // ---------- CHECKOUT (texty 7.1 doslovně) ----------
+  if (step === "checkout" || step === "paying" || step === "payment_failed") {
+    return (
+      <div className="py-12">
+        {step === "payment_failed" ? (
+          <div className="rounded-2xl border border-surface bg-surface p-6">
+            <h1 className="font-display text-[40px] leading-[1.12] font-semibold text-body">
+              Platba neproběhla.
+            </h1>
+            <p className="mt-3 text-body-dim">
+              Nic jsme ti nestrhli. Zkus to znovu, nebo vyber jinou platební
+              metodu. Tvoje otázka i karty zůstávají připravené.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => setStep("checkout")}
+                className="rounded-xl bg-gold px-6 py-3 font-medium text-night hover:bg-gold-soft"
+              >
+                Zkusit znovu
+              </button>
+              <button
+                onClick={() => setStep("checkout")}
+                className="rounded-xl border border-surface px-6 py-3 text-body-dim hover:text-body"
+              >
+                Jiná platební metoda
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h1 className="font-display text-[42px] leading-[1.1] font-semibold text-body">
+              Nomi na tebe čeká.
+            </h1>
+            <p className="mt-4 text-body-dim">
+              Tvoje otázka: „{question}"
+              <br />
+              Rozklad: {spreadDef.name}
+            </p>
+            <button
+              onClick={() => setShowSpreadPicker((v) => !v)}
+              className="mt-2 text-sm text-body-dim underline decoration-night-line underline-offset-4 hover:text-body"
+            >
+              Raději chci jiný rozklad
+            </button>
+            {showSpreadPicker && (
+              <div className="mt-3 flex flex-col gap-2">
+                {(["yesno", "between_us", "my_ex"] as const).map((k) => (
                   <button
-                    key={chip}
-                    onClick={() => setQuestion(chip)}
-                    className="rounded-full border border-accent-dim px-3 py-1.5 text-sm text-accent-soft hover:border-accent"
+                    key={k}
+                    onClick={() => {
+                      setSpread(k);
+                      setShowSpreadPicker(false);
+                    }}
+                    className={`rounded-xl border px-4 py-3 text-left text-sm ${
+                      spread === k
+                        ? "border-accent text-body"
+                        : "border-surface text-body-dim hover:text-body"
+                    }`}
                   >
-                    {chip}
+                    {SPREADS[k].name} · {SPREADS[k].cardCount}{" "}
+                    {SPREADS[k].cardCount === 1 ? "karta" : SPREADS[k].cardCount <= 4 ? "karty" : "karet"}
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => submitQuestion()}
-                disabled={!question.trim()}
-                className="btn-primary mt-6 w-full sm:w-auto"
-              >
-                Položit otázku
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {(step === "crisis_a" || step === "crisis_b" || step === "crisis_c") && (
-        <CrisisScreen
-          variant={step}
-          spirioHref={`${SPIRIO_URL}?utm_source=tarotolasce&utm_medium=app&utm_campaign=most-po-vykladu`}
-          onBack={() => setStep("question")}
-        />
-      )}
-
-      {step === "ritual" && sessionId && (
-        <Ritual
-          sessionId={sessionId}
-          cardCount={spreadDef.cardCount}
-          positions={positions}
-          onReshuffle={async () => {
-            const res = await fetch("/api/session/shuffle", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ spread }),
-            }).then((r) => r.json());
-            setSessionId(res.sessionId);
-            return res.sessionId as string;
-          }}
-          onComplete={onRitualComplete}
-          revealFaces={FLOW_CLASSIC || (creditsEnabled && credits > 0)}
-        />
-      )}
-
-      {step === "loadingTeaser" && (
-        <div className="flex flex-col items-center gap-2 py-20 text-center">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-rose-500" />
-          {/* v1.6 §7.9 DOSLOVA */}
-          <p className="font-display text-xl text-body">Nomi připravuje tvůj výklad</p>
-          <p className="text-sm text-body-dim">
-            Dívá se na tvoji otázku a karty, které sis vybrala.
-          </p>
-        </div>
-      )}
-
-      {(step === "teaser" || step === "folie" || step === "paying" ||
-        step === "payment_failed") && (
-        <div className="py-10">
-          {/* v1.6 §7.10 rámování. V OCHUTNÁVCE se otočí jen PRVNÍ karta a
-              vždy NORMÁLNĚ (nikdy obráceně) - obrácení se prozradí až
-              v zaplaceném výkladu. Zbytek karet zůstává rubem nahoru. */}
-          <h1 className="font-display text-body">Tvůj výklad</h1>
-          <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
-          <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">
-            Tvoje karty
-          </p>
-          <div className="mt-2 flex flex-wrap items-end gap-2">
-            {cards.map((c, i) =>
-              i === 0 ? (
-                // První karta lícem nahoru, ale VŽDY normálně (reversed=false)
-                CARD_BY_ID[c.cardId] ? (
-                  <CardFace
-                    key={c.cardId + i}
-                    card={CARD_BY_ID[c.cardId]}
-                    reversed={false}
-                    className="h-28 w-[74px] drop-shadow-card"
-                  />
-                ) : (
-                  <CardBack key={c.cardId + i} className="h-28 w-[74px] drop-shadow-card" aria-hidden />
-                )
-              ) : (
-                <CardBack key={c.cardId + i} className="h-24 w-16 drop-shadow-card" aria-hidden />
-              )
             )}
-          </div>
-          <p className="mt-2 text-sm text-body-dim">
-            {cards.length > 1
-              ? `Otočila jsem ti první kartu. Zbylé ${kartyAkuzativ(cards.length - 1)} se otočí po odemčení.`
-              : "Otočila jsem ti kartu. Celý výklad se odemkne níže."}
-          </p>
 
-          {crisisText ? (
-            // Krizová odpověď: celá, bez fólie a bez platby (invariant 8)
-            <p className="prose-tarot mt-6 whitespace-pre-line text-lg text-body">
-              {crisisText}
-            </p>
-          ) : (
-            <>
-              <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
-                Začátek tvého výkladu:
+            <div className="mt-8 rounded-2xl border border-accent-dim/40 bg-surface p-6">
+              <p className="font-display text-2xl text-accent-soft">
+                {creditsEnabled && credits > 0
+                  ? "Výklad z tvého balíčku"
+                  : isFirst
+                    ? "První výklad za 29 Kč (běžně 49 Kč)"
+                    : `Výklad za ${price} Kč`}
               </p>
-              {/* Úvod výkladu s FADE-OUT: text je nahoře plně čitelný a
-                  plynule přechází do 0 % alpha (mizí do prázdna), takže
-                  poslední řádky ochutnávky nejsou čitelné. Během fáze
-                  „teaser" se odhaluje po slovech; ve fázi platby se drží
-                  celý úvod, ale spodek je vyblednutý maskou. */}
-              {(() => {
-                const introText =
-                  step === "teaser" && teaserShown ? teaserShown : teaser;
-                return (
-                  <p
-                    className="prose-tarot mt-2 whitespace-pre-line text-lg text-body"
-                    style={{
-                      WebkitMaskImage:
-                        "linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)",
-                      maskImage:
-                        "linear-gradient(to bottom, #000 0%, #000 40%, transparent 96%)",
-                    }}
-                  >
-                    {introText}
+
+              <div className="mt-6">
+                {emailConfirmed ? (
+                  <p className="text-sm text-body-dim">
+                    Výklad ti uložíme na {email} ·{" "}
+                    <button
+                      onClick={() => setEmailConfirmed(false)}
+                      className="underline underline-offset-2 hover:text-body"
+                    >
+                      upravit
+                    </button>
                   </p>
-                );
-              })()}
-
-              {(step === "folie" || step === "paying" || step === "payment_failed") && (
-                <>
-                  {/* CTA štítek nad platbou */}
-                  <p className="mt-2 text-center text-sm text-body-dim">
-                    Zbytek výkladu se odemkne po zaplacení.
-                  </p>
-
-                  {/* 5.3 platební schodiště */}
-                  <div className="mt-8 rounded-2xl border border-surface bg-surface p-6">
-                    {step === "payment_failed" && (
-                      <p className="mb-4 text-sm text-accent-soft">
-                        Platba neprošla. Nic jsme ti nestrhli - zkus to prosím znovu.
-                      </p>
-                    )}
-
-                    {stair === "a" ? (
-                      <>
-                        {/* 5.3 a) první nákup DOSLOVA */}
-                        <p className="font-display text-2xl font-semibold text-body">
-                          Odemkni si celý výklad
-                        </p>
-                        <p className="mt-1 text-body">
-                          <strong className="lining-nums-price">{PRICES.first} Kč</strong>{" "}
-                          <span className="text-body-dim">(běžně {PRICES.single} Kč)</span>
-                        </p>
-                        <p className="mt-4 text-sm font-medium text-body">Tvůj e-mail</p>
-                        <p className="text-xs text-body-dim">
-                          Pod tímto e-mailem ti výklad uložíme, aby ses k němu
-                          mohla vrátit.
-                        </p>
-                        <input
-                          type="email"
-                          inputMode="email"
-                          autoComplete="email"
-                          value={email}
-                          onChange={(e) => { setEmail(e.target.value); setEmailConfirmed(false); }}
-                          placeholder="tvuj@email.cz"
-                          className="mt-2 w-full rounded-xl border border-surface bg-surface-2 p-3 text-body"
-                        />
-                        {emailSuggestion && emailSuggestion !== email && (
-                          <button
-                            onClick={() => setEmail(emailSuggestion)}
-                            className="mt-1 text-xs text-accent-soft underline underline-offset-2"
-                          >
-                            Myslela jsi {emailSuggestion}?
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {/* 5.3 b) vracející se: jedno klepnutí */}
-                        <p className="font-display text-2xl font-semibold text-body">
-                          Odemknout výklad · {PRICES.single} Kč
-                        </p>
-                        {introUsedServer && (
-                          <p className="mt-2 text-sm text-body-dim">
-                            Máš u nás účet — pošleme ti kód a odemkneš uloženou
-                            kartou.{" "}
-                            <Link href="/prihlaseni" className="text-accent-soft underline underline-offset-2">
-                              Přihlásit se
-                            </Link>
-                          </p>
-                        )}
-                      </>
-                    )}
-
-                    {SHOW_1837_CONSENT && (
-                      <label className="mt-5 flex items-start gap-3 text-xs text-body-dim">
-                        <input
-                          type="checkbox"
-                          checked={consent}
-                          onChange={(e) => setConsent(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 accent-rose-500"
-                        />
-                        <span>
-                          Souhlasím s dodáním digitálního obsahu ihned po zaplacení a
-                          beru na vědomí, že tím ztrácím právo na odstoupení od smlouvy
-                          ve 14denní lhůtě.
-                        </span>
-                      </label>
-                    )}
-
-                    <div className="mt-5 grid gap-3">
-                      {isApplePlatform ? (
-                        <button
-                          onClick={unlock}
-                          disabled={payDisabled}
-                          className="rounded-full bg-black px-6 py-3.5 font-semibold text-white hover:bg-neutral-900 disabled:opacity-60"
-                        >
-                          {step === "paying" ? "Zpracovává se…" : "Apple Pay"}
-                        </button>
-                      ) : (
-                        <GooglePayButton
-                          onClick={unlock}
-                          disabled={payDisabled}
-                          busy={step === "paying"}
-                        />
-                      )}
-                      <button onClick={unlock} disabled={payDisabled} className="btn-primary">
-                        {step === "paying" ? "Zpracovává se…" : "Zaplatit kartou"}
-                      </button>
-                    </div>
-
-                    {stair === "a" && (
-                      <p className="mt-4 text-xs text-body-dim">
-                        Když ti první výklad nic nedá, napiš nám a {PRICES.first} Kč
-                        ti vrátíme.
-                      </p>
-                    )}
-                    {stair !== "a" && (
-                      <p className="mt-4 text-xs text-body-dim">
-                        Ptáš se častěji? 5 výkladů za {PRICES.pack5} Kč — vychází na
-                        40 Kč za výklad. ·{" "}
-                        <Link href="/cenik" className="text-accent-soft underline underline-offset-2">
-                          všechny balíčky
-                        </Link>
-                      </p>
-                    )}
-                    {stair === "c" && (
-                      <p className="mt-2 text-xs text-body-dim">
-                        Tohle je tvůj třetí výklad tenhle měsíc — s balíčkem 5
-                        výkladů bys ušetřila.
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {(step === "reading" || step === "paths" || step === "reading_error") && (
-        <div className="py-10">
-          {/* v1.6 §7.10 rámování */}
-          <h1 className="font-display text-body">Tvůj výklad</h1>
-          <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
-          <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
-          {/* Zaplacený/kreditový výklad: karty lícem nahoru se skutečnou
-              orientací (obrácené se ukážou jako obrácené) + názvy pod nimi */}
-          <div className="mt-2 flex flex-wrap gap-3">
-            {cards.map((c, i) => (
-              <div key={c.cardId + i} className="w-[74px] text-center">
-                {CARD_BY_ID[c.cardId] ? (
-                  <CardFace
-                    card={CARD_BY_ID[c.cardId]}
-                    reversed={c.reversed}
-                    className="h-28 w-[74px] drop-shadow-card"
-                  />
                 ) : (
-                  <CardBack className="h-28 w-[74px] drop-shadow-card" />
+                  <>
+                    <label htmlFor="email" className="block text-sm text-body">
+                      Tvůj e-mail
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => { if (email.includes("@")) { setEmailConfirmed(true); logEvent("email_entered", {}); } }}
+                      className="mt-2 w-full rounded-xl border border-surface bg-surface-2 p-3 text-body focus:border-accent"
+                    />
+                    {emailSuggestion && (
+                      <button
+                        type="button"
+                        onClick={() => setEmail(emailSuggestion)}
+                        className="mt-2 text-xs text-accent-soft underline underline-offset-2"
+                      >
+                        Myslela jsi {emailSuggestion}?
+                      </button>
+                    )}
+                    <p className="mt-2 text-xs text-body-dim">
+                      Sem ti výklad uložíme, ať se k němu můžeš kdykoli vrátit.
+                      A každé ráno ti pošleme kartu dne zdarma. Žádné heslo,
+                      žádné ověřování.
+                    </p>
+                  </>
                 )}
-                <p className="mt-1 text-xs text-body-dim">
+              </div>
+
+              <label className="mt-6 flex items-start gap-3 text-xs text-body-dim">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => { setConsent(e.target.checked); if (e.target.checked) logEvent("consent_checked", {}); }}
+                  className="mt-0.5 h-4 w-4 accent-gold"
+                  required
+                />
+                <span>
+                  Souhlasím s dodáním digitálního obsahu ihned po zaplacení a
+                  beru na vědomí, že tím ztrácím právo na odstoupení od smlouvy
+                  ve 14denní lhůtě.
+                </span>
+              </label>
+
+              <div className="mt-6 grid gap-3">
+                {creditsEnabled && credits > 0 ? (
+                  <button
+                    onClick={pay}
+                    disabled={!consent || !email.includes("@")}
+                    className="rounded-xl bg-gold px-6 py-3.5 font-medium text-night hover:bg-gold-soft disabled:opacity-40"
+                  >
+                    Použít výklad z balíčku
+                  </button>
+                ) : (
+                  <>
+                    {isApplePlatform ? (
+                      <button
+                        onClick={pay}
+                        disabled={payDisabled}
+                        className="rounded-xl bg-black px-6 py-3.5 font-semibold text-white hover:bg-neutral-900 disabled:opacity-60 disabled:saturate-[.35]"
+                      >
+                        {step === "paying" ? "Zpracovává se…" : "Apple Pay"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={pay}
+                        disabled={payDisabled}
+                        className="rounded-xl border border-surface bg-white px-6 py-3.5 font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-60 disabled:saturate-[.35]"
+                      >
+                        {step === "paying" ? "Zpracovává se…" : "Google Pay"}
+                      </button>
+                    )}
+                    <button
+                      onClick={pay}
+                      disabled={payDisabled}
+                      className="rounded-xl bg-gold px-6 py-3.5 font-semibold text-night hover:opacity-90 disabled:opacity-60 disabled:saturate-[.35]"
+                    >
+                      {step === "paying" ? "Zpracovává se…" : "Zaplatit kartou"}
+                    </button>
+                  </>
+                )}
+              </div>
+              {!consent && (
+                <p className="mt-2 text-xs text-accent-soft">Nejdřív potvrď souhlas výše.</p>
+              )}
+
+              <p className="mt-5 text-xs text-body-dim">
+                {creditsEnabled && credits > 0
+                  ? `Výklady generuje AI kartářka Nomi. Po vydání výkladu ti ${vykladu(credits - 1)}.`
+                  : "Výklady generuje AI kartářka Nomi. Pokud ti první výklad nic nedá, napiš nám a 29 Kč ti vrátíme."}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- RITUÁL ----------
+  if (step === "ritual") {
+    return (
+      <Ritual
+        sessionId={sessionId}
+        cardCount={spreadDef.cardCount}
+        positions={positions}
+        onReshuffle={async () => {
+          const res = await fetch("/api/session/shuffle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ spread }),
+          }).then((r) => r.json());
+          setSessionId(res.sessionId);
+          return res.sessionId as string;
+        }}
+        onComplete={onRitualComplete}
+      />
+    );
+  }
+
+  // ---------- VÝKLAD + 3 CESTY ----------
+  if (step === "reading" || step === "paths" || step === "reading_error") {
+    return (
+      <div className="py-8">
+        {/* Rozložené karty zůstávají nahoře */}
+        <div className="mx-auto grid max-w-xl grid-cols-3 gap-3">
+          {cards.map((c) => (
+            <div key={c.position} className="text-center">
+              <span className="text-[11px] leading-tight text-accent-soft">{c.position}</span>
+              <div className="mt-1 rounded-lg border border-surface bg-cream/95 p-2 text-night">
+                <span className="block text-2xl">{c.symbol ?? "✦"}</span>
+                <span className="block text-[11px] font-medium leading-tight">
                   {c.name}
                   {c.reversed ? " (obráceně)" : ""}
-                </p>
+                </span>
               </div>
-            ))}
-          </div>
-          {creditUsed && (
-            <p className="mt-3 text-sm text-body-dim">
-              Odemčeno z balíčku · zbývají{" "}
-              {vykladu(Math.max(0, credits - 1))}.
-            </p>
-          )}
-          <p className="mt-6 text-xs uppercase tracking-wider text-body-dim">
-            Tohle se ve tvém výkladu ukazuje nejsilněji:
-          </p>
-
-          {step === "reading_error" ? (
-            <div className="mt-6 rounded-2xl border border-surface bg-surface p-6">
-              <p className="text-body">Výklad se nepodařilo načíst.</p>
-              <button onClick={() => setStep("reading")} className="btn-primary mt-4">
-                Zkusit znovu
-              </button>
             </div>
-          ) : (
-            <ReadingStream
-              sessionId={sessionId}
-              question={question}
-              spread={spread}
-              cards={cards}
-              useCredit={creditUsed}
-              flowB={!FLOW_CLASSIC && !creditUsed}
-              teaser={!FLOW_CLASSIC && !creditUsed ? teaser : ""}
-              onMeta={(id) => setReadingId(id)}
-              onError={() => setStep("reading_error")}
-              onDone={() => {
-                if (!countedRef.current) {
-                  countedRef.current = true;
-                  bumpReadingCount();
-                  logEvent("reading_completed", { spread, type: readingType(spread) });
-                }
-                setStep("paths");
-              }}
-            />
-          )}
-
-          {step === "paths" && (
-            <>
-              <p className="mt-6 text-sm text-body-dim">
-                Výklad máš uložený v historii.
-              </p>
-              {readingId && <ReadingFeedback readingId={readingId} spread={spread} />}
-              <ThreePaths spread={spread} credits={credits} singlePurchases={singles} onRestart={restartFlow} />
-            </>
-          )}
+          ))}
         </div>
-      )}
-    </main>
-  );
+
+        {step === "reading_error" ? (
+          <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-surface bg-surface p-6">
+            <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
+              Karty potřebují chvilku navíc.
+            </h2>
+            <p className="mt-3 text-body-dim">
+              Výklad se připravuje déle, než je obvyklé. Máš ho zaplacený a
+              nikam nezmizí. Zkus obnovit stránku, nebo se vrať za pár minut.
+              Výklad najdeš ve své historii.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-5 rounded-xl bg-gold px-6 py-3 font-medium text-night hover:bg-gold-soft"
+            >
+              Obnovit stránku
+            </button>
+          </div>
+        ) : (
+          <ReadingStream
+            sessionId={sessionId}
+            question={question}
+            spread={spread}
+            cards={cards}
+            onMeta={(id) => {
+              setReadingId(id);
+              // Cesta ke průvodkyni: napočítej výklad (jen jednou na výklad)
+              if (!countedRef.current) {
+                countedRef.current = true;
+                bumpReadingCount();
+              }
+              // Refresh-safe: jakmile je výklad uložený na serveru, přepíšeme
+              // URL na kanonickou /vyklad/[id]. Obnovení stránky (i během
+              // streamování) tak skončí na server-rendered uloženém výkladu,
+              // ne zpět na otázce. Bez tvrdé navigace, stream běží dál.
+              window.history.replaceState(null, "", `/vyklad/${id}`);
+            }}
+            onDone={() => { logEvent("reading_completed", { spread }); setStep("paths"); }}
+            onError={() => {
+              // Kredit se NIKDY nestrhne za nevydaný výklad
+              if (creditUsed) {
+                const restored = getCredits() + 1;
+                setCredits(restored);
+                setCreditsState(restored);
+                setCreditUsed(false);
+              }
+              setStep("reading_error");
+            }}
+          />
+        )}
+
+        {step === "paths" && (
+          <>
+            {readingId && <ReadingFeedback readingId={readingId} />}
+            <ThreePaths spread={spread} credits={getCredits()} singlePurchases={singles} />
+            {readingId && (
+              <p className="mt-8 text-center text-sm text-body-dim">
+                Trvalý odkaz na výklad:{" "}
+                <Link href={`/vyklad/${readingId}`} className="text-accent-soft underline underline-offset-2">
+                  otevřít uložený výklad
+                </Link>
+              </p>
+            )}
+            <p className="mt-10 border-t border-surface pt-6 text-center text-xs text-body-dim">
+              Tarot o Lásce je nástroj reflexe pro zábavu a sebepoznání.
+              Nenahrazuje profesionální terapii ani medicínskou péči. V krizi
+              kontaktuj Linku první psychické pomoci: 116 123.
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function NovyVykladPage() {
   return (
-    <Suspense fallback={<p className="py-16 text-center text-body-dim">Načítám…</p>}>
+    <Suspense>
       <FlowInner />
     </Suspense>
   );

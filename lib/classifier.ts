@@ -52,19 +52,3 @@ export function classify(question: string): ClassifyResult {
 
   return { spread: "between_us", reason: "default" };
 }
-
-
-/* ---------- kategorie otázky (v1.6 §1, podklad Brány 4.1) ----------
- * Tentýž klasifikátor od dne 1 určuje i kategorii; loguje se event
- * question_category (kategorie + příznak zaplaceno/ochutnávka).
- * MOCK heuristika; v produkci stejný model jako typ výkladu. */
-export type QuestionCategory = "láska" | "práce" | "peníze" | "životní cesta" | "jiné";
-
-export function categorize(question: string): QuestionCategory {
-  const q = ` ${question.toLowerCase()} `;
-  if (/prác|šéf|kariér|zaměstnán|povýšen|kolegy|výpověď|pohovor|firmě|brigád/.test(q)) return "práce";
-  if (/peníz|penz|dluh|hypoték|investic|výplat|finanč|našetř|koupit byt|exekuc/.test(q)) return "peníze";
-  if (/smysl život|kam směřuj|životní cest|co mám dělat se život|najdu se|své místo|poslání|změnit život/.test(q)) return "životní cesta";
-  if (/miluj|láska|lásce|vztah|cítí|ozve|ex |býval|rozchod|napsat mu|napsat jí|rande|přítel|partner|manžel|srdc|city|políb|věrn|podvád/.test(q)) return "láska";
-  return "jiné";
-}

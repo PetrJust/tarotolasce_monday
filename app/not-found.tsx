@@ -12,7 +12,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="rounded-xl bg-rose-500 px-6 py-3 font-medium text-plum-900 hover:opacity-90"
+        className="rounded-xl bg-gold px-6 py-3 font-medium text-night hover:bg-gold-soft"
       >
         Zpět na úvod
       </Link>

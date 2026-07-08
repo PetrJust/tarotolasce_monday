@@ -1,93 +1,140 @@
 "use client";
-// „Co dál?" po odemčení výkladu (v1.6 §7.12, copy DOSLOVA).
-// Hierarchie: primární = další otázka; SPIRIO a historie sekundární.
-// Timing mostu: od 1. výkladu; kontextový trigger platí.
-// P2 (nestavět): „právě teď" nahradit reálným online indikátorem.
+// 7.3 Konec výkladu: 3 cesty. Cesta 2 je SPIRIO CTA.
+// Navíc: „Cesta k průvodkyni" (tichý ukazatel + dárek po 10. výkladu)
+// a jemná brzda při 3+ výkladech za den. Vše bez dark patterns:
+// dárek je dárek, brzda je péče, nic neblokujeme.
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PRICES } from "@/lib/pricing";
+import SpirioCTA, { spirioUrl } from "./SpirioCTA";
+import { vykladu } from "@/lib/declension";
+import {
+  getReadingCount, isGuideGiftUsed, setGuideGiftUsed,
+} from "@/lib/clientState";
+import { useCreditsEnabled } from "@/lib/flags";
 import { logEvent } from "@/lib/analytics";
-import { getReadingCount } from "@/lib/clientState";
-import { SPIRIO_URL } from "@/lib/site";
+
+const GIFT_AT = 10; // po kolikátém výkladu se otevře dárek
 
 export default function ThreePaths({
   spread,
   credits,
   singlePurchases,
-  onRestart,
 }: {
   spread: string;
   credits: number;
   singlePurchases: number;
-  // Reset toku na obrazovku nové otázky (bez navigace - stejná route)
-  onRestart?: () => void;
 }) {
-  void credits;
-  void singlePurchases;
-  const spirioHref = `${SPIRIO_URL}?utm_source=tarotolasce&utm_medium=app&utm_campaign=most-po-vykladu`;
+  const prominent = spread === "my_ex";
+  const creditsEnabled = useCreditsEnabled();
+  const [reads, setReads] = useState(0);
+  const [giftUsed, setGiftUsed] = useState(true); // než se načte, nic neukazuj
+
+  useEffect(() => {
+    setReads(getReadingCount());
+    setGiftUsed(isGuideGiftUsed());
+  }, []);
+
+  const giftOpen = reads >= GIFT_AT && !giftUsed;
 
   return (
-    <section className="mt-10">
-      <h2 className="font-display text-body">Co dál?</h2>
+    <section className="mt-12 space-y-5">
+      <h2 className="font-display text-[32px] leading-[1.15] font-semibold text-body">Co dál?</h2>
 
-      {/* Primární: další otázka */}
-      <div className="mt-5 rounded-2xl border border-surface bg-surface p-6">
-        <p className="font-medium text-body">Máš ještě jednu otázku?</p>
-        <p className="mt-1 text-sm text-body-dim">
-          Můžeš se zeptat znovu. Nová otázka, nové karty, nový výklad.
-        </p>
-        {onRestart ? (
-          <button onClick={onRestart} className="btn-primary mt-4 w-full sm:w-auto">
-            Položit další otázku
-          </button>
-        ) : (
-          <Link href="/vyklad/novy" className="btn-primary mt-4 w-full sm:w-auto">
-            Položit další otázku
-          </Link>
-        )}
-        <p className="mt-2 text-xs text-body-dim lining-nums-price">
-          Další výklad {PRICES.single} Kč
-        </p>
-      </div>
+      {/* DÁREK: Cesta k průvodkyni dokončena (MOCK: v produkci se voucher
+          uplatní přes Spirio; tady jen odkaz s UTM a poděkování) */}
+      {giftOpen && (
+        <div className="relative overflow-hidden rounded-2xl border border-accent/60 bg-surface p-5 shadow-[0_0_32px_rgba(240,66,110,0.18)]">
+          <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#3B0764] to-[#BE185D]" />
+          <p className="text-[11px] uppercase tracking-wider text-accent-soft">
+            Průvodkyně · dárek pro tebe
+          </p>
+          <h3 className="mt-1 font-display text-2xl font-semibold text-body">
+            Máš u nás dárek.
+          </h3>
+          <p className="mt-2 text-sm text-body-dim">
+            Ptala ses karet už desetkrát. Některé otázky si zaslouží živého
+            člověka. Vyber si průvodkyni na Spiriu a prvních 10 minut máš od
+            nás zdarma. Bez podmínek, jen jako poděkování.
+          </p>
+          <a
+            href={spirioUrl(spread, "cesta10")}
+            onClick={() => {
+              logEvent("spirio_click", { placement: "cesta10", spread, readings: reads });
+              setGuideGiftUsed();
+              setGiftUsed(true);
+            }}
+            className="mt-4 inline-block rounded-xl bg-love px-6 py-3 font-semibold text-night-deep transition hover:opacity-90"
+          >
+            Vybrat průvodkyni · 10 minut zdarma
+          </a>
+          <p className="mt-3 text-[11px] text-body-dim">
+            Průvodkyně jako Tinja nebo Berkana · 4,8 z 5 ★ · Garance vrácení peněz.
+            Čas se počítá až od připojení průvodkyně.
+          </p>
+        </div>
+      )}
 
-      {/* Sekundární: SPIRIO most */}
-      <div className="mt-4 rounded-2xl border border-surface bg-surface p-6">
-        <p className="font-medium text-body">Chceš výklad od skutečné kartářky?</p>
-        <p className="mt-1 text-sm text-body-dim">
-          Na SPIRIO se můžeš spojit s ověřenými kartářkami a průvodkyněmi
-          právě teď.
-        </p>
+      {/* Cesta 1 */}
+      <div className="rounded-2xl border border-surface bg-surface p-5">
         <a
-          href={spirioHref}
-          target="_blank"
-          rel="noopener"
-          onClick={() =>
-            logEvent("spirio_click", {
-              source: "most-po-vykladu",
-              spread,
-              readings: getReadingCount(),
-            })
-          }
-          className="mt-4 inline-flex items-center justify-center rounded-[22px] border-2 border-rose-500 px-6 py-3 font-bold text-accent-soft hover:border-accent hover:text-accent"
+          href="/vyklad/novy"
+          className="font-display text-xl font-semibold text-accent-soft hover:text-accent"
         >
-          Vybrat průvodkyni na Spirio
+          {creditsEnabled && credits > 0
+            ? `Vytáhnout si další karty · ${vykladu(credits)}`
+            : "Vytáhnout si další karty · 49 Kč"}
         </a>
-        <p className="mt-3 text-xs text-body-dim">
-          4,8 z 5 ★ · 14 000+ sezení · 40+ průvodkyň a průvodců · Čas se
-          počítá až od připojení průvodkyně
+        <p className="mt-2 text-sm text-body-dim">
+          {`Nová otázka, nové karty.${creditsEnabled && credits > 0 ? " Bez placení, z tvého balíčku." : " Platba na jedno klepnutí."}`}
         </p>
       </div>
 
-      {/* Sekundární: historie */}
-      <div className="mt-4 rounded-2xl border border-surface bg-surface p-6">
-        <p className="font-medium text-body">Vrátit se k výkladu později</p>
-        <p className="mt-1 text-sm text-body-dim">Výklad máš uložený v historii.</p>
+      {/* Cesta 2: Spirio */}
+      <SpirioCTA spread={spread} placement="3cesty" prominent={prominent} />
+
+      {/* Tichý ukazatel cesty (jen když dárek ještě čeká) */}
+      {!giftOpen && !giftUsed && reads > 0 && (
+        <div className="flex items-center justify-center gap-2 pt-1" title="Průvodkyně">
+          <div className="flex gap-1.5" aria-hidden="true">
+            {Array.from({ length: GIFT_AT }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-1.5 rounded-full ${
+                  i < reads ? "bg-gold" : "bg-night-line"
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] text-body-dim">
+            Průvodkyně · {Math.min(reads, GIFT_AT)} z {GIFT_AT}
+          </span>
+        </div>
+      )}
+
+      {/* Cesta 3 */}
+      <div className="rounded-2xl border border-surface bg-surface p-5">
         <Link
           href="/historie"
-          className="mt-3 inline-block text-accent-soft underline underline-offset-2 hover:text-accent"
+          className="font-display text-xl font-semibold text-body hover:text-accent-soft"
         >
-          Otevřít historii
+          Nechat si to na potom
         </Link>
+        <p className="mt-2 text-sm text-body-dim">
+          Výklad zůstává uložený. Kdykoli se k němu vrátíš ve své historii.
+        </p>
       </div>
+
+      {/* Banner po 2. jednotlivém nákupu */}
+      {creditsEnabled && singlePurchases >= 2 && (
+        <div className="rounded-2xl border border-accent-dim/50 bg-surface p-5">
+          <p className="text-body-dim">
+            Ptáš se ráda? 5 výkladů za 199 Kč vychází na 40 Kč za výklad.{" "}
+            <Link href="/cenik" className="font-medium text-accent-soft hover:text-accent">
+              Vybrat balíček
+            </Link>
+          </p>
+        </div>
+      )}
     </section>
   );
 }

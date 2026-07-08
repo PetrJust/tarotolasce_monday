@@ -3,59 +3,31 @@
 // takže kredit se nikdy nestrhne za nevydaný výklad.
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { mockReading, mockFlowB } from "@/lib/mockReadings";
+import { mockReading } from "@/lib/mockReadings";
 import { saveReading } from "@/lib/store";
-import { sessionUser } from "@/lib/account";
-import {
-  LEDGER_COOKIE, parseLedger, ledgerConsume, ledgerSetCookieHeader,
-} from "@/lib/cookieLedger";
+import { consumeCredit, sessionUser } from "@/lib/account";
 import { sendPurchaseEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/site";
 import { SPREADS, SpreadKey } from "@/lib/spreads";
-import { withApiGuard } from "@/lib/apiGuard";
 
 export const dynamic = "force-dynamic";
 
-async function handlePOST(req: NextRequest) {
-  // FLOW B (v1.6 §5.4): flowB=true + teaser -> plná generace dostane
-  // teaser jako vstup a stream NAVÁŽE PŘESNĚ tam, kde úvod skončil
-  // (klientovi se posílá jen pokračování; uloží se celý text).
-  // Kontinuita je v mocku zaručená konstrukcí (mockFlowB: teaser je
-  // přesný prefix plného textu). Odemčení působí okamžitě: stream
-  // startuje hned (<2 s po platbě).
-  const { sessionId, question, cards, spread, useCredit, flowB, teaser } = await req.json();
+export async function POST(req: NextRequest) {
+  const { sessionId, question, cards, spread, useCredit } = await req.json();
   if (!sessionId || !Array.isArray(cards) || !spread || !(spread in SPREADS)) {
     return new Response("bad request", { status: 400 });
   }
 
   // Čerpání z balíčku: rozhoduje SERVER podle ledgeru, ne frontend (A.2).
   // Idempotentní na sessionId - obnovení stránky nestrhne kredit dvakrát.
-  // MOCK: ledger v podepsané cookie (lib/cookieLedger.ts) - nová hodnota
-  // se posílá Set-Cookie hlavičkou na streamované odpovědi níže.
-  let ledgerCookieHeader: string | null = null;
   if (useCredit) {
     const u = await sessionUser(cookies().get("tol_session")?.value);
     if (!u) return new Response("login required", { status: 401 });
-    const ledger = parseLedger(cookies().get(LEDGER_COOKIE)?.value, u.email);
-    const c = ledgerConsume(ledger, String(sessionId));
+    const c = await consumeCredit(u.userId, String(sessionId));
     if (!c.ok) return new Response("insufficient credit", { status: 402 });
-    ledgerCookieHeader = ledgerSetCookieHeader(c.ledger);
   }
 
-  // Jméno z profilu (mock: cookie tol_name) - úvod výkladu
-  const profileName = decodeURIComponent(cookies().get("tol_name")?.value ?? "");
-  let text: string;
-  let streamFrom = 0; // Flow B: klientovi se streamuje až od konce teaseru
-  if (flowB) {
-    const fb = mockFlowB(spread as SpreadKey, question ?? "", cards, profileName);
-    text = fb.full;
-    // navázání: preferuj skutečný teaser z požadavku (produkce: prefix
-    // promptu); fallback na vlastní konstrukci
-    const t = typeof teaser === "string" && text.startsWith(teaser) ? teaser : fb.teaser;
-    streamFrom = t.length;
-  } else {
-    text = mockReading(spread as SpreadKey, question ?? "", cards, profileName);
-  }
+  const text = mockReading(spread as SpreadKey, question ?? "", cards);
   const su = await sessionUser(cookies().get("tol_session")?.value);
   const email = su?.email ?? cookies().get("tol_email")?.value ?? null;
   const saved = await saveReading({
@@ -71,8 +43,7 @@ async function handlePOST(req: NextRequest) {
     void sendPurchaseEmail(email, `${SITE_URL}/vyklad/${saved.id}`).catch(() => {});
   }
 
-  const continuation = streamFrom > 0 ? text.slice(streamFrom) : text;
-  const words = continuation.split(" ");
+  const words = text.split(" ");
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -95,13 +66,11 @@ async function handlePOST(req: NextRequest) {
     },
   });
 
-  const headers: Record<string, string> = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  };
-  if (ledgerCookieHeader) headers["Set-Cookie"] = ledgerCookieHeader;
-  return new Response(stream, { headers });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }
-
-export const POST = withApiGuard(handlePOST);

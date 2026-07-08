@@ -42,15 +42,3 @@ export function setDevCreditsOverride(value: boolean | null) {
 }
 
 export const CREDITS_ENV_DEFAULT = ENV_DEFAULT;
-
-
-// v1.5 §5.1: checkbox §1837 se NEZOBRAZUJE (rozhodnutí zakladatele
-// 6. 7. 2026, log v PR-POPIS.md). Kód checkboxu zůstává za tímhle flagem;
-// právo na odstoupení 14 dní trvá. Zapnutí: NEXT_PUBLIC_SHOW_1837_CONSENT=1.
-export const SHOW_1837_CONSENT =
-  process.env.NEXT_PUBLIC_SHOW_1837_CONSENT === "1";
-
-// v1.6 §5.5: staré flow (platba PŘED rituálem) zůstává za flagem;
-// default OFF = jede Flow B (teaser -> fólie -> platba -> navázání).
-// Návrat ke klasice = NEXT_PUBLIC_FLOW_CLASSIC=1 (minuta).
-export const FLOW_CLASSIC = process.env.NEXT_PUBLIC_FLOW_CLASSIC === "1";
