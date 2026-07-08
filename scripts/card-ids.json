@@ -1,0 +1,314 @@
+[
+  {
+    "id": "blazen",
+    "name": "Blázen"
+  },
+  {
+    "id": "mag",
+    "name": "Mág"
+  },
+  {
+    "id": "veleknezka",
+    "name": "Velekněžka"
+  },
+  {
+    "id": "cisarovna",
+    "name": "Císařovna"
+  },
+  {
+    "id": "cisar",
+    "name": "Císař"
+  },
+  {
+    "id": "veleknez",
+    "name": "Velekněz"
+  },
+  {
+    "id": "zamilovani",
+    "name": "Zamilovaní"
+  },
+  {
+    "id": "vuz",
+    "name": "Vůz"
+  },
+  {
+    "id": "sila",
+    "name": "Síla"
+  },
+  {
+    "id": "poustevnik",
+    "name": "Poustevník"
+  },
+  {
+    "id": "kolo-stesti",
+    "name": "Kolo štěstí"
+  },
+  {
+    "id": "spravedlnost",
+    "name": "Spravedlnost"
+  },
+  {
+    "id": "viselec",
+    "name": "Viselec"
+  },
+  {
+    "id": "smrt",
+    "name": "Smrt"
+  },
+  {
+    "id": "mirnost",
+    "name": "Mírnost"
+  },
+  {
+    "id": "dabel",
+    "name": "Ďábel"
+  },
+  {
+    "id": "vez",
+    "name": "Věž"
+  },
+  {
+    "id": "hvezda",
+    "name": "Hvězda"
+  },
+  {
+    "id": "mesic",
+    "name": "Měsíc"
+  },
+  {
+    "id": "slunce",
+    "name": "Slunce"
+  },
+  {
+    "id": "soud",
+    "name": "Soud"
+  },
+  {
+    "id": "svet",
+    "name": "Svět"
+  },
+  {
+    "id": "eso-pohary",
+    "name": "Eso pohárů"
+  },
+  {
+    "id": "dvojka-pohary",
+    "name": "Dvojka pohárů"
+  },
+  {
+    "id": "trojka-pohary",
+    "name": "Trojka pohárů"
+  },
+  {
+    "id": "ctyrka-pohary",
+    "name": "Čtyřka pohárů"
+  },
+  {
+    "id": "petka-pohary",
+    "name": "Pětka pohárů"
+  },
+  {
+    "id": "sestka-pohary",
+    "name": "Šestka pohárů"
+  },
+  {
+    "id": "sedmicka-pohary",
+    "name": "Sedmička pohárů"
+  },
+  {
+    "id": "osmicka-pohary",
+    "name": "Osmička pohárů"
+  },
+  {
+    "id": "devitka-pohary",
+    "name": "Devítka pohárů"
+  },
+  {
+    "id": "desitka-pohary",
+    "name": "Desítka pohárů"
+  },
+  {
+    "id": "paze-pohary",
+    "name": "Páže pohárů"
+  },
+  {
+    "id": "rytir-pohary",
+    "name": "Rytíř pohárů"
+  },
+  {
+    "id": "kralovna-pohary",
+    "name": "Královna pohárů"
+  },
+  {
+    "id": "kral-pohary",
+    "name": "Král pohárů"
+  },
+  {
+    "id": "eso-mece",
+    "name": "Eso mečů"
+  },
+  {
+    "id": "dvojka-mece",
+    "name": "Dvojka mečů"
+  },
+  {
+    "id": "trojka-mece",
+    "name": "Trojka mečů"
+  },
+  {
+    "id": "ctyrka-mece",
+    "name": "Čtyřka mečů"
+  },
+  {
+    "id": "petka-mece",
+    "name": "Pětka mečů"
+  },
+  {
+    "id": "sestka-mece",
+    "name": "Šestka mečů"
+  },
+  {
+    "id": "sedmicka-mece",
+    "name": "Sedmička mečů"
+  },
+  {
+    "id": "osmicka-mece",
+    "name": "Osmička mečů"
+  },
+  {
+    "id": "devitka-mece",
+    "name": "Devítka mečů"
+  },
+  {
+    "id": "desitka-mece",
+    "name": "Desítka mečů"
+  },
+  {
+    "id": "paze-mece",
+    "name": "Páže mečů"
+  },
+  {
+    "id": "rytir-mece",
+    "name": "Rytíř mečů"
+  },
+  {
+    "id": "kralovna-mece",
+    "name": "Královna mečů"
+  },
+  {
+    "id": "kral-mece",
+    "name": "Král mečů"
+  },
+  {
+    "id": "eso-hole",
+    "name": "Eso holí"
+  },
+  {
+    "id": "dvojka-hole",
+    "name": "Dvojka holí"
+  },
+  {
+    "id": "trojka-hole",
+    "name": "Trojka holí"
+  },
+  {
+    "id": "ctyrka-hole",
+    "name": "Čtyřka holí"
+  },
+  {
+    "id": "petka-hole",
+    "name": "Pětka holí"
+  },
+  {
+    "id": "sestka-hole",
+    "name": "Šestka holí"
+  },
+  {
+    "id": "sedmicka-hole",
+    "name": "Sedmička holí"
+  },
+  {
+    "id": "osmicka-hole",
+    "name": "Osmička holí"
+  },
+  {
+    "id": "devitka-hole",
+    "name": "Devítka holí"
+  },
+  {
+    "id": "desitka-hole",
+    "name": "Desítka holí"
+  },
+  {
+    "id": "paze-hole",
+    "name": "Páže holí"
+  },
+  {
+    "id": "rytir-hole",
+    "name": "Rytíř holí"
+  },
+  {
+    "id": "kralovna-hole",
+    "name": "Královna holí"
+  },
+  {
+    "id": "kral-hole",
+    "name": "Král holí"
+  },
+  {
+    "id": "eso-pentakly",
+    "name": "Eso pentaklů"
+  },
+  {
+    "id": "dvojka-pentakly",
+    "name": "Dvojka pentaklů"
+  },
+  {
+    "id": "trojka-pentakly",
+    "name": "Trojka pentaklů"
+  },
+  {
+    "id": "ctyrka-pentakly",
+    "name": "Čtyřka pentaklů"
+  },
+  {
+    "id": "petka-pentakly",
+    "name": "Pětka pentaklů"
+  },
+  {
+    "id": "sestka-pentakly",
+    "name": "Šestka pentaklů"
+  },
+  {
+    "id": "sedmicka-pentakly",
+    "name": "Sedmička pentaklů"
+  },
+  {
+    "id": "osmicka-pentakly",
+    "name": "Osmička pentaklů"
+  },
+  {
+    "id": "devitka-pentakly",
+    "name": "Devítka pentaklů"
+  },
+  {
+    "id": "desitka-pentakly",
+    "name": "Desítka pentaklů"
+  },
+  {
+    "id": "paze-pentakly",
+    "name": "Páže pentaklů"
+  },
+  {
+    "id": "rytir-pentakly",
+    "name": "Rytíř pentaklů"
+  },
+  {
+    "id": "kralovna-pentakly",
+    "name": "Královna pentaklů"
+  },
+  {
+    "id": "kral-pentakly",
+    "name": "Král pentaklů"
+  }
+]

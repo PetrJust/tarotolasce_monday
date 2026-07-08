@@ -8,6 +8,8 @@ import { getReading } from "@/lib/store";
 import { READINGS_COOKIE, findReading } from "@/lib/cookieReadings";
 import { mockFlowB, mockReading } from "@/lib/mockReadings";
 import { SpreadKey } from "@/lib/spreads";
+import { CARD_BY_ID } from "@/lib/cards";
+import { CardBack, CardFace } from "@/components/TarotCard";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import { PERSONA_NAME } from "@/lib/persona";
@@ -72,24 +74,39 @@ export default async function SavedReadingPage({ params }: { params: { id: strin
         „{reading.question}"
       </h1>
 
-      <div className="mx-auto mt-8 grid max-w-xl grid-cols-3 gap-3">
-        {reading.cards.map((c) => (
-          <div key={c.position} className="text-center">
-            <span className="text-[11px] leading-tight text-accent-soft">{c.position}</span>
-            <div className="mt-1 rounded-lg border border-surface bg-cream/95 p-2 text-plum-900">
-              <span className="block text-[11px] font-medium leading-tight">
-                {c.name}
-                {c.reversed ? " (obráceně)" : ""}
-              </span>
-            </div>
+      {/* Karty stejně jako v čerstvém výkladu: obrázky lícem nahoru se
+          skutečnou orientací + název pod nimi. Layout se přizpůsobí počtu
+          karet (1 / 3 / 6), nezalomí se do gridu se špatnými sloupci. */}
+      <p className="mt-8 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
+      <div className="mt-2 flex flex-wrap gap-3">
+        {reading.cards.map((c, i) => (
+          <div key={c.cardId + i} className="w-[74px] text-center">
+            {CARD_BY_ID[c.cardId] ? (
+              <CardFace
+                card={CARD_BY_ID[c.cardId]}
+                reversed={c.reversed}
+                className="h-28 w-[74px] drop-shadow-card"
+              />
+            ) : (
+              <CardBack className="h-28 w-[74px] drop-shadow-card" />
+            )}
+            <p className="mt-1 text-[11px] leading-tight text-body-dim">
+              {c.name}
+              {c.reversed ? " (obráceně)" : ""}
+            </p>
+            {c.position ? (
+              <p className="text-[10px] leading-tight text-accent-soft">{c.position}</p>
+            ) : null}
           </div>
         ))}
       </div>
 
-      <p className="mx-auto mt-8 max-w-xl text-xs uppercase tracking-wider text-accent-soft">
+      <p className="mt-8 text-xs uppercase tracking-wider text-accent-soft">
         Výklad od {PERSONA_NAME}, tvé AI kartářky
       </p>
-      <div className="prose-tarot mx-auto mt-2 max-w-xl text-lg leading-relaxed text-body">
+      {/* whitespace-pre-line zachová zalomení odstavců (\n\n) z enginu,
+          stejně jako živý ReadingStream. */}
+      <div className="prose-tarot mt-2 whitespace-pre-line text-lg leading-relaxed text-body">
         {reading.text}
       </div>
 
@@ -98,7 +115,7 @@ export default async function SavedReadingPage({ params }: { params: { id: strin
       <ThreePaths spread={reading.spreadKey} credits={0} singlePurchases={0} />
 
       <p className="mt-10 border-t border-surface pt-6 text-center text-xs text-body-dim">
-{DISCLAIMER}
+        {DISCLAIMER}
       </p>
     </article>
   );
