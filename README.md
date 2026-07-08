@@ -94,3 +94,48 @@ GET  /api/readings        → Postgres
 - Právní stránky obsahují `TODO` značky pro právníka
 - Provozovatel v patičce: `{TODO}`
 - Spirio landing URL: `https://spirio.cz/landing-TBD` (UTM parametry hotové)
+
+
+## Testování na preview (pro zakladatele) - v1.3 §5
+
+Dev a test režim se řídí `VERCEL_ENV`: na **preview** je zapnutý, na
+**produkci neexistuje** (hlídá `npm run deploy-check`, spouští se
+automaticky před buildem) - POKUD ho vědomě neodemkneš přepínačem níže.
+
+**Jak si projít nákup end-to-end na preview:**
+
+1. Na preview deployi nastav env proměnné:
+   - `TEST_OTP_CODE=123456` - přihlašovací kód bude vždycky tenhle a na
+     obrazovce kódu se ukáže banner „Testovací režim: kód je 123456".
+   - (volitelně) `OTP_DEV_PREVIEW=1` - /dev/kredit umí rychlé přihlášení.
+2. Otevři `/prihlaseni`, zadej svůj e-mail, opiš kód z banneru.
+3. Jdi na `/cenik` a kup balíček - platba jde přes Stripe **test mode**,
+   použij kartu `4242 4242 4242 4242`, libovolnou budoucí expiraci a CVC.
+   Když platba selže, uvidíš viditelnou chybu pod tlačítkem (nic se
+   nestrhne).
+4. Zůstatek zkontroluješ na `/profil` nebo na `/dev/kredit`.
+5. Polož otázku na homepage - checkout ti nabídne čerpání z balíčku.
+
+**Co na produkci nesmí existovat (a build to hlídá):** `TEST_OTP_CODE`,
+`OTP_DEV_PREVIEW`, jakákoli `/dev/*` stránka (vrací 404) - pokud nejsou
+vědomě odemknuté (viz níže).
+
+### Testování přímo na produkční doméně (např. tarotolasce.vercel.app)
+
+Pokud nemáš samostatný preview deploy a chceš `/dev/kredit` vyzkoušet
+rovnou na produkční doméně, nastav ve Vercelu (Project Settings →
+Environment Variables, scope **Production**):
+
+```
+ALLOW_DEV_TOOLS=1
+TEST_OTP_CODE=123456      # volitelné, ať nemusíš číst e-mail
+OTP_DEV_PREVIEW=1         # volitelné, /dev/kredit pak umí rychlé přihlášení
+```
+
+Po uložení redeployni (Vercel → Deployments → „Redeploy" na poslední
+commit, nebo push nový commit). Build teď při `ALLOW_DEV_TOOLS=1`
+nespadne, ale vypíše ve stavu buildu žluté varování, že `/dev/*` je na
+produkci veřejně dostupné - to je záměr, ne chyba.
+
+**Po dotestování všechny tři proměnné z Vercelu smaž a znovu redeployni**,
+ať `/dev/*` na produkci zase zmizí (404) pro běžné návštěvnice.

@@ -1,7 +1,8 @@
-// Ceník: balíčky 1/5/20 výkladů, Product JSON-LD (kapitola 10.3).
+// Ceník: 4 karty (v1.3 §4), Product JSON-LD (kapitola 10.3).
 // SSR stránka, nákup balíčku řeší klientská komponenta níže.
 import type { Metadata } from "next";
 import BuyPack from "@/components/BuyPack";
+import ViewPricingPing from "@/components/ViewPricingPing";
 
 export const metadata: Metadata = {
   title: "Ceník: tarotové výklady od 29 Kč",
@@ -49,28 +50,39 @@ const productJsonLd = {
   ],
 };
 
+// v1.3 §4: finální ceník - ČTYŘI karty, žádný mezistav „Brzy".
+// První dvě vedou do checkout flow, balíčky nakupují přes /api/checkout
+// (zapojeno ve stejném nasazení jako ledger; pojistka = 6 ledger testů).
 const TIERS = [
+  {
+    name: "První výklad",
+    price: "29 Kč",
+    detail: "Pro první otázku. Vybereš si karty a Nomi ti připraví výklad, ke kterému se můžeš kdykoliv vrátit.",
+    cta: "Koupit první výklad",
+    priceId: null,
+    credits: 0,
+  },
   {
     name: "1 výklad",
     price: "49 Kč",
-    note: "První výklad za 29 Kč",
-    detail: "Jedna otázka, jeden rozklad, výklad uložený navždy.",
+    detail: "Když se chceš zeptat na další věc.",
+    cta: "Koupit výklad",
     priceId: null,
     credits: 0,
   },
   {
     name: "5 výkladů",
     price: "199 Kč",
-    note: "vychází na 40 Kč za výklad",
-    detail: "Pro chvíle, kdy se otázky vrací. Výklady nepropadají.",
+    detail: "Pro chvíle, kdy se otázky vrací.",
+    cta: "Vybrat balíček",
     priceId: "price_pack5_199",
     credits: 5,
   },
   {
     name: "20 výkladů",
     price: "599 Kč",
-    note: "vychází na 30 Kč za výklad",
-    detail: "Pro tebe, když jsou karty tvůj večerní rituál.",
+    detail: "Pro pravidelné výklady a návraty ke kartám.",
+    cta: "Vybrat balíček",
     priceId: "price_pack20_599",
     credits: 20,
   },
@@ -78,6 +90,8 @@ const TIERS = [
 
 export default function CenikPage() {
   return (
+    <>
+    <ViewPricingPing />
     <div className="py-10">
       <script
         type="application/ld+json"
@@ -85,12 +99,11 @@ export default function CenikPage() {
       />
       <h1 className="font-display text-[42px] leading-[1.1] font-semibold text-body">Ceník</h1>
       <p className="mt-4 max-w-xl text-body-dim">
-        Žádné předplatné, žádné automatické strhávání. Platíš jen za výklady,
-        které chceš. Pokud ti první výklad nic nedá, napiš nám a 29 Kč ti
-        vrátíme.
+        Vybereš si jen výklad nebo balíček, který chceš. Bez předplatného.
+        Bez závazků.
       </p>
 
-      <div className="mt-10 grid gap-5 sm:grid-cols-3">
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {TIERS.map((t) => (
           <div
             key={t.name}
@@ -99,17 +112,19 @@ export default function CenikPage() {
             <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
               {t.name}
             </h2>
-            <p className="mt-2 font-display text-3xl text-accent-soft">{t.price}</p>
-            <p className="mt-1 text-xs text-body-dim">{t.note}</p>
+            <p className="mt-2 font-display text-3xl text-accent-soft lining-nums-price">{t.price}</p>
             <p className="mt-4 flex-1 text-sm text-body-dim">{t.detail}</p>
-            <BuyPack priceId={t.priceId} credits={t.credits} />
+            <BuyPack priceId={t.priceId} credits={t.credits} primary={t.name === "První výklad"} ctaLabel={t.cta} />
           </div>
         ))}
       </div>
 
-      <p className="mt-8 text-xs text-body-dim">
-        Karta dne je vždy zdarma. Výklady generuje AI.
+      <p className="mt-8 text-sm text-body-dim">Karta dne je zdarma.</p>
+      <p className="mt-1 text-sm text-body-dim">
+        Balíčky nejsou předplatné. Koupíš je jednou a výklady čerpáš podle
+        sebe.
       </p>
     </div>
+    </>
   );
 }

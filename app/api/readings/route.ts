@@ -4,15 +4,19 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sessionUser } from "@/lib/account";
 import { readingsByEmail } from "@/lib/store";
+import { withApiGuard } from "@/lib/apiGuard";
 
-export async function GET() {
+async function handleGET() {
   const u = await sessionUser(cookies().get("tol_session")?.value);
   if (!u) return NextResponse.json({ readings: [], loggedIn: false });
   const list = (await readingsByEmail(u.email)).map((r) => ({
     id: r.id,
     question: r.question,
     spreadName: r.spreadName,
+    cardCount: Array.isArray(r.cards) ? r.cards.length : 0,
     createdAt: r.createdAt,
   }));
   return NextResponse.json({ readings: list, loggedIn: true });
 }
+
+export const GET = withApiGuard(handleGET);

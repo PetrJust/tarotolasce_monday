@@ -118,7 +118,7 @@ export default function CardPage({ params }: { params: { slug: string } }) {
         </p>
         <Link
           href="/"
-          className="mt-4 inline-block rounded-xl bg-gold px-6 py-3 font-medium text-night hover:bg-gold-soft"
+          className="mt-4 inline-block rounded-xl bg-rose-500 px-6 py-3 font-medium text-plum-900 hover:opacity-90"
         >
           Položit otázku
         </Link>

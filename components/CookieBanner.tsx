@@ -1,17 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
+import { loadPixelsIfConsented } from "@/lib/pixels";
 
-// Mock cookie consent. Volba se ukládá do cookie (není to citlivý údaj).
+// Cookie consent. Volba se ukládá do cookie. TVRDÁ PODMÍNKA (v1.5 §7):
+// pixely (Meta/TikTok) se načítají a střílí VÝHRADNĚ po „Přijmout vše";
+// po „Jen nezbytné" se nenačte nic.
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (!document.cookie.includes("tol_consent=")) setVisible(true);
+    // Souhlas z dřívějška -> pixely se smí načíst i teď
+    loadPixelsIfConsented();
   }, []);
 
   function choose(value: "all" | "necessary") {
     document.cookie = `tol_consent=${value}; path=/; max-age=${60 * 60 * 24 * 365}`;
     setVisible(false);
+    if (value === "all") loadPixelsIfConsented();
   }
 
   if (!visible) return null;
@@ -30,7 +36,7 @@ export default function CookieBanner() {
           </button>
           <button
             onClick={() => choose("all")}
-            className="rounded-lg bg-gold px-4 py-2 text-sm font-medium text-night hover:bg-gold-soft"
+            className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-plum-900 hover:opacity-90"
           >
             Přijmout vše
           </button>

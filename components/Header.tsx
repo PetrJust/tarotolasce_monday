@@ -17,15 +17,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-surface bg-surface-2 backdrop-blur">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="shrink-0" aria-label="Tarot o Lásce, domů">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-wordmark.png"
-            alt="Tarot o Lásce"
-            width={504}
-            height={78}
-            className="h-7 w-auto sm:h-8"
-          />
+        {/* Wordmark v Loře (v1.5 §5.8); finální schválení [ČEKÁ NA ROMANA] */}
+        <Link href="/" className="font-display text-xl font-semibold tracking-wide text-body">
+          Tarot <span className="text-accent">o Lásce</span>
         </Link>
 
         <div className="flex items-center gap-3">
@@ -37,8 +31,10 @@ export default function Header() {
           </span>
           <CreditBadge />
           <nav className="hidden items-center gap-3 sm:flex">
-            <Link href="/cenik" className="text-sm text-body-dim hover:text-body">Ceník</Link>
+            <Link href="/karta-dne" className="text-sm text-body-dim hover:text-body">Karta dne</Link>
             <Link href="/historie" className="text-sm text-body-dim hover:text-body">Historie</Link>
+            <Link href="/cenik" className="text-sm text-body-dim hover:text-body">Ceník</Link>
+            <Link href="/vyznam-karet" className="text-sm text-body-dim hover:text-body">Významy karet</Link>
           </nav>
           {!loading && (
             <Link href={accountHref} className="text-sm font-semibold text-accent-soft hover:text-accent">
@@ -57,10 +53,13 @@ export default function Header() {
           </button>
         </div>
       </div>
+      {/* v1.5 §5.7: pořadí položek DOSLOVA */}
       {open && (
         <nav className="border-t border-surface bg-surface px-4 py-3 sm:hidden">
-          <Link href="/cenik" onClick={() => setOpen(false)} className="block py-2 text-body">Ceník</Link>
+          <Link href="/karta-dne" onClick={() => setOpen(false)} className="block py-2 text-body">Karta dne</Link>
           <Link href="/historie" onClick={() => setOpen(false)} className="block py-2 text-body">Historie</Link>
+          <Link href="/cenik" onClick={() => setOpen(false)} className="block py-2 text-body">Ceník</Link>
+          <Link href="/vyznam-karet" onClick={() => setOpen(false)} className="block py-2 text-body">Významy karet</Link>
         </nav>
       )}
     </header>

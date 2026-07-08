@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" width="200" height="320">
+  <!-- Rub karty se srdcem — rozhodnutí zakladatele: srdce všude, TOL se ruší -->
+  <rect fill="#2B1340" x="3" y="3" width="194" height="314" rx="16"/>
+  <rect fill="none" stroke="#D4AF37" stroke-width="2" x="12" y="12" width="176" height="296" rx="11"/>
+  <rect fill="none" stroke="#D4AF37" stroke-width="1" x="18" y="18" width="164" height="284" rx="8" opacity="0.6"/>
+  <!-- hvězdy a měsíce v rozích (symetricky) -->
+  <path fill="#D4AF37" d="M100 40 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z"/>
+  <path fill="#D4AF37" d="M100 258 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 z" />
+  <circle fill="#D4AF37" cx="40" cy="46" r="2.2"/><circle fill="#D4AF37" cx="160" cy="46" r="2.2"/>
+  <circle fill="#D4AF37" cx="40" cy="274" r="2.2"/><circle fill="#D4AF37" cx="160" cy="274" r="2.2"/>
+  <!-- centrální srdce (romantic-pink, ladí s akcenty appky) -->
+  <path fill="#E84D9A" stroke="#F6BBD9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+        d="M100 196 C 66 168, 54 146, 54 128 C 54 110, 68 98, 83 98 C 92 98, 98 103, 100 110 C 102 103, 108 98, 117 98 C 132 98, 146 110, 146 128 C 146 146, 134 168, 100 196 Z"/>
+</svg>

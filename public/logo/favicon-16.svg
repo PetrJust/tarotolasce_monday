@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- zjednodušená verze pro 16px: jen karta + srdce, bez rámečku a hvězd -->
+  <rect fill="#2B1340" x="0.5" y="0.5" width="15" height="15" rx="3.5"/>
+  <path fill="#E84D9A" d="M8 12 C 5 9.6, 3.8 8, 3.8 6.4 C 3.8 4.9, 4.9 4, 6.1 4 C 6.9 4, 7.7 4.4, 8 5.2 C 8.3 4.4, 9.1 4, 9.9 4 C 11.1 4, 12.2 4.9, 12.2 6.4 C 12.2 8, 11 9.6, 8 12 Z"/>
+</svg>
