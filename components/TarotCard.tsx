@@ -8,17 +8,33 @@ import { useState } from "react";
 import { Card } from "@/lib/cards";
 import { palette, tokens } from "@/lib/palette";
 
+// Cache výsledku načtení obrázkových assetů (per session, module-level):
+// když /cards/back.webp (nebo líc) jednou chybí, další mounty jdou rovnou
+// na SVG fallback - žádný pokus o <img>, žádné bliknutí.
+let backImgFailed = false;
+const faceImgFailed = new Set<string>();
+
 export function CardBack({ className = "" }: { className?: string }) {
-  const [imgOk, setImgOk] = useState(true);
+  const [imgOk, setImgOk] = useState(!backImgFailed);
   if (imgOk) {
     return (
-      <span className={`relative block ${className}`}>
+      // alt je PRÁZDNÝ záměrně: než doběhne onError u chybějícího souboru,
+      // prohlížeč by vykreslil alt text („Rub karty Rub karty…" při prvním
+      // načtení). Přístupnost drží aria-label na obalu.
+      <span
+        className={`relative block ${className}`}
+        role="img"
+        aria-label="Rub karty"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/cards/back.webp"
-          alt="Rub karty"
+          alt=""
           className="h-full w-full rounded-[8%] object-cover"
-          onError={() => setImgOk(false)}
+          onError={() => {
+            backImgFailed = true;
+            setImgOk(false);
+          }}
           draggable={false}
         />
       </span>
@@ -71,17 +87,26 @@ export function CardFace(props: {
   reversed?: boolean;
   className?: string;
 }) {
-  const { card, className = "" } = props;
-  const [imgOk, setImgOk] = useState(true);
+  const { card, reversed = false, className = "" } = props;
+  const [imgOk, setImgOk] = useState(!faceImgFailed.has(card.id));
   if (imgOk) {
     return (
-      <span className={`relative block ${className}`}>
+      // alt prázdný ze stejného důvodu jako u rubu (žádný flash názvů
+      // karet, když .webp chybí); aria-label na obalu.
+      <span
+        className={`relative block ${className}`}
+        role="img"
+        aria-label={card.name}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/cards/${card.id}.webp`}
-          alt={card.name}
-          className="h-full w-full rounded-[8%] object-cover"
-          onError={() => setImgOk(false)}
+          alt=""
+          className={`h-full w-full rounded-[8%] object-cover${reversed ? " rotate-180" : ""}`}
+          onError={() => {
+            faceImgFailed.add(card.id);
+            setImgOk(false);
+          }}
           draggable={false}
         />
       </span>
