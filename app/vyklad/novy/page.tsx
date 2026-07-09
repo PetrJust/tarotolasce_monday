@@ -11,12 +11,12 @@ import Link from "next/link";
 import CrisisScreen from "@/components/CrisisScreen";
 import Ritual, { PickedCard } from "@/components/Ritual";
 import ReadingStream from "@/components/ReadingStream";
-import { CardBack, CardFace } from "@/components/TarotCard";
+import ReadingCards from "@/components/ReadingCards";
+import TeaserCards from "@/components/TeaserCards";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import GooglePayButton from "@/components/GooglePayButton";
 import { SPREADS, SpreadKey, betweenUsPositions } from "@/lib/spreads";
-import { CARD_BY_ID } from "@/lib/cards";
 import { PRICES, PRICE_IDS } from "@/lib/pricing";
 import { moderate } from "@/lib/moderation";
 import { classify, categorize } from "@/lib/classifier";
@@ -416,26 +416,16 @@ function FlowInner() {
           <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">
             Tvoje karty
           </p>
-          <div className="mt-2 flex flex-wrap items-end gap-2">
-            {cards.map((c, i) =>
-              // Líc jen u první karty a JEN když je karet víc než jedna.
-              i === 0 && cards.length > 1 ? (
-                // První karta lícem nahoru, ale VŽDY normálně (reversed=false)
-                CARD_BY_ID[c.cardId] ? (
-                  <CardFace
-                    key={c.cardId + i}
-                    card={CARD_BY_ID[c.cardId]}
-                    reversed={false}
-                    className="h-28 w-[74px] drop-shadow-card"
-                  />
-                ) : (
-                  <CardBack key={c.cardId + i} className="h-28 w-[74px] drop-shadow-card" aria-hidden />
-                )
-              ) : (
-                <CardBack key={c.cardId + i} className="h-24 w-16 drop-shadow-card" aria-hidden />
-              )
-            )}
-          </div>
+          {/* v1.6.1 §2: layout jako ve výkladu, zamčené karty se zámečkem
+              (tap = shake + scroll k odemčení), otočená karta = detail */}
+          <TeaserCards
+            cards={cards.map((c) => ({
+              cardId: c.cardId,
+              name: c.name,
+              reversed: c.reversed,
+            }))}
+            unlockAnchorId="odemknout"
+          />
           <p className="mt-2 text-sm text-body-dim">
             {cards.length > 1
               ? `Otočila jsem ti první kartu. Zbylé ${kartyAkuzativ(cards.length - 1)} se otočí po odemčení.`
@@ -483,7 +473,7 @@ function FlowInner() {
                   </p>
 
                   {/* 5.3 platební schodiště */}
-                  <div className="mt-8 rounded-2xl border border-surface bg-surface p-6">
+                  <div id="odemknout" className="mt-8 scroll-mt-24 rounded-2xl border border-surface bg-surface p-6">
                     {step === "payment_failed" && (
                       <p className="mb-4 text-sm text-accent-soft">
                         Platba neprošla. Nic jsme ti nestrhli - zkus to prosím znovu.

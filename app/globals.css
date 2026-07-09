@@ -142,3 +142,13 @@ button { font-weight: 700; } /* v1.3 §2 */
 @media (prefers-reduced-motion: reduce) {
   .daily-shuffle { animation: none; }
 }
+
+/* v1.6.1 §2.3: jemný shake hint při klepnutí na zamčenou kartu */
+@keyframes tol-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-1deg); }
+  40% { transform: translateX(4px) rotate(1deg); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.tol-shake { animation: tol-shake 0.4s ease-in-out; }

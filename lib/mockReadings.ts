@@ -95,7 +95,8 @@ const RANK_TONE: Record<string, string> = {
   kral: "vláda nad vlastním územím",
 };
 
-function cardMeaning(card: PickedCard): string {
+// Exportováno pro detail otočené karty (v1.6.1 §2.4): krátký význam.
+export function cardMeaning(card: PickedCard): string {
   const m = MAJOR[card.cardId];
   if (m) return card.reversed ? m.rev : m.up;
   const [rank, suit] = card.cardId.split("-");

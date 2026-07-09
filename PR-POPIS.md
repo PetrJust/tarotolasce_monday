@@ -64,3 +64,16 @@ plně testovatelné (Stripe test mode).
 
 - `FLOW_CLASSIC` = off → Flow B (teaser → fólie → platba → navázání).
 - `SHOW_1837_CONSENT` = off → checkbox §1837 skrytý.
+
+## v1.6.1 dodatek - poznámka k interpretaci (patička)
+
+Dodatek §1 říká: „Tagline žije jen: OG šablony, sociální profily, patička"
+a zároveň invariant 9: „logo (wordmark / symbol / tagline) se na jedné
+obrazovce vyskytuje právě jednou - v hlavičce."
+
+Interpretace (ne KONFLIKT, jen zápis rozhodnutí): „patička" čteme jako
+patičku e-mailů/externích materiálů, ne UI stránek - protože táž věta říká
+„V UI stránek se nezobrazuje". Proto z patičky WEBU odstraněn i submark
+LogoSymbol (druhý výskyt loga na každé obrazovce). Tagline zůstává v OG,
+Stories a e-mailech. Kdyby zakladatel chtěl symbol v patičce webu vrátit,
+je to jednořádková změna v components/Footer.tsx.

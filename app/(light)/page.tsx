@@ -69,16 +69,8 @@ export default function LandingPage() {
     <div className="py-10">
       {/* HERO (7.1 DOSLOVA) */}
       <section className="text-center">
-        {/* Oficiální lockup (wordmark + tagline), public/logo/lockup.png */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo/lockup.png"
-          alt="Tarot o Lásce — Porozumět lásce. Porozumět sobě."
-          width={504}
-          height={145}
-          className="mx-auto mb-8 h-auto w-[280px] max-w-full sm:w-[340px]"
-          draggable={false}
-        />
+        {/* v1.6.1 §1 (invariant 9): logo je na obrazovce právě jednou -
+            v hlavičce. Hero začíná ilustrací karet a jde rovnou k otázce. */}
         <div className="mx-auto mb-6 flex w-fit -space-x-8" aria-hidden>
           <CardBack className="h-32 w-20 -rotate-12 drop-shadow-card" />
           <CardBack className="h-32 w-20 drop-shadow-card" />

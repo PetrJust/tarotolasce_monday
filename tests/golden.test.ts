@@ -285,10 +285,16 @@ describe("v1.6 §9.2/9.3: Flow B úvod a kontinuita", () => {
     }
   });
 
-  it("jednokaretní úvod neprozradí kartu ani její význam", () => {
+  it("jednokaretní úvod neprozradí kartu, význam ani směr (v1.6.1 §4)", () => {
     const single = mockFlowB("yesno", "Myslí na mě ještě?", [CARD("ctyrka-pohary", false)], "Klára");
     expect(single.teaser).not.toContain("Čtyřka pohárů");
     expect(single.teaser.toLowerCase()).not.toContain("stabilita");
+    // §4: žádné „kloní se k ano/ne" před fólií - směr se neprozrazuje
+    expect(single.teaser.toLowerCase()).not.toContain("kloní");
+    expect(single.teaser.toLowerCase()).not.toContain("spíš k ano");
+    expect(single.teaser.toLowerCase()).not.toContain("spíš k ne");
+    // končí uprostřed myšlenky
+    expect(single.teaser.trim().endsWith("—")).toBe(true);
     // ale placený výklad kartu jmenuje
     expect(single.full).toContain("Čtyřka pohárů");
     // a kontinuita drží

@@ -471,3 +471,27 @@ zapisuje cookie přes Set-Cookie; detail /vyklad/[id] i list /api/readings
 odkazům), text výkladu se v detailu deterministicky REGENERUJE z karet
 mock enginem. Historie nově funguje i bez přihlášení (per zařízení).
 Ověřeno 8/8 (save/find/regenerace/tamper/limit20).
+
+---
+
+# SESSION 9: dodatek v1.6.1 + oprava spadlého buildu
+
+**Oprava buildu:** v1.6.20 spadl na „Cannot find name 'ReadingCards'" -
+komponenta použitá v app/vyklad/novy/page.tsx, ale import se nevložil.
+Doplněn. Kontrola scripts/check-imports.mjs ROZŠÍŘENA o detekci
+neimportovaných JSX komponent (chytá přesně tuhle třídu chyby; spouštět
+před každým zipem: node scripts/check-imports.mjs).
+
+**Dodatek v1.6.1 implementován:**
+- §1 invariant 9: hero bez lockupu/taglinu (logo 1x = hlavička); submark
+  odstraněn i z patičky webu (interpretace zapsána v PR-POPIS.md).
+- §2.1+2.2: ReadingCards - 3 karty plná řada, 6 karet mřížka 2x3 přes
+  šířku; 1 karta dominantní na středu (~62 %, max 240 px). Platí ve
+  výkladu, ochutnávce (TeaserCards) i detailu historie.
+- §2.3: zamčené karty se zámečkem; tap = tol-shake + scroll na #odemknout.
+- §2.4: tap na otočenou kartu = CardDetail overlay (velká ilustrace,
+  jméno, krátký význam z cardMeaning - nově exportováno, návrat zpět).
+- §3: jediný rub (růžové srdce) ověřen všude; zlatý obrys nikde (grep).
+- §4: golden test - 1karetní teaser nejmenuje kartu, neprozrazuje směr
+  („kloní se"), končí uprostřed myšlenky; 3/6karetní dle 5.1 beze změny.
+- §5 MIMO SCOPE: líce karet nedotčeny.

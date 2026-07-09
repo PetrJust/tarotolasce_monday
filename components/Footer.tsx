@@ -1,5 +1,4 @@
 import { DISCLAIMER } from "@/lib/site";
-import LogoSymbol from "@/components/LogoSymbol";
 import { PERSONA_FULL } from "@/lib/persona";
 import Link from "next/link";
 import { OPERATOR, OPERATOR_ICO, CONTACT_EMAIL } from "@/lib/site";
@@ -24,10 +23,8 @@ export default function Footer() {
           18+ · Výklady vytváří {PERSONA_FULL} · Provozovatel: {OPERATOR}{OPERATOR_ICO ? `, IČO: ${OPERATOR_ICO}` : ""} · <a href={`mailto:${CONTACT_EMAIL}`} className="text-rose-500 hover:text-cream">{CONTACT_EMAIL}</a>
         </p>
         <p>{DISCLAIMER}</p>
-        {/* v1.6 §3: submark = symbol se srdcem */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-          <LogoSymbol size={24} />
-        </div>
+        {/* v1.6.1 invariant 9: logo je na obrazovce právě jednou (hlavička),
+            submark z patičky odstraněn. */}
       </div>
     </footer>
   );
