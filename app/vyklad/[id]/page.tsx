@@ -8,8 +8,7 @@ import { getReading } from "@/lib/store";
 import { READINGS_COOKIE, findReading } from "@/lib/cookieReadings";
 import { mockFlowB, mockReading } from "@/lib/mockReadings";
 import { SpreadKey } from "@/lib/spreads";
-import { CARD_BY_ID } from "@/lib/cards";
-import { CardBack, CardFace } from "@/components/TarotCard";
+import ReadingCards from "@/components/ReadingCards";
 import ThreePaths from "@/components/ThreePaths";
 import ReadingFeedback from "@/components/ReadingFeedback";
 import { PERSONA_NAME } from "@/lib/persona";
@@ -78,28 +77,8 @@ export default async function SavedReadingPage({ params }: { params: { id: strin
           skutečnou orientací + název pod nimi. Layout se přizpůsobí počtu
           karet (1 / 3 / 6), nezalomí se do gridu se špatnými sloupci. */}
       <p className="mt-8 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
-      <div className="mt-2 flex flex-wrap gap-3">
-        {reading.cards.map((c, i) => (
-          <div key={c.cardId + i} className="w-[74px] text-center">
-            {CARD_BY_ID[c.cardId] ? (
-              <CardFace
-                card={CARD_BY_ID[c.cardId]}
-                reversed={c.reversed}
-                className="h-28 w-[74px] drop-shadow-card"
-              />
-            ) : (
-              <CardBack className="h-28 w-[74px] drop-shadow-card" />
-            )}
-            <p className="mt-1 text-[11px] leading-tight text-body-dim">
-              {c.name}
-              {c.reversed ? " (obráceně)" : ""}
-            </p>
-            {c.position ? (
-              <p className="text-[10px] leading-tight text-accent-soft">{c.position}</p>
-            ) : null}
-          </div>
-        ))}
-      </div>
+      {/* Rozložení dle počtu karet: 1 velká / 3 velké / 6 v mřížce 3+3 */}
+      <ReadingCards cards={reading.cards} />
 
       <p className="mt-8 text-xs uppercase tracking-wider text-accent-soft">
         Výklad od {PERSONA_NAME}, tvé AI kartářky

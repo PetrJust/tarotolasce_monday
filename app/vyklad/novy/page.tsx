@@ -614,26 +614,15 @@ function FlowInner() {
           <p className="mt-2 text-body-dim">Tvoje otázka: „{question}"</p>
           <p className="mt-4 text-xs uppercase tracking-wider text-body-dim">Tvoje karty</p>
           {/* Zaplacený/kreditový výklad: karty lícem nahoru se skutečnou
-              orientací (obrácené se ukážou jako obrácené) + názvy pod nimi */}
-          <div className="mt-2 flex flex-wrap gap-3">
-            {cards.map((c, i) => (
-              <div key={c.cardId + i} className="w-[74px] text-center">
-                {CARD_BY_ID[c.cardId] ? (
-                  <CardFace
-                    card={CARD_BY_ID[c.cardId]}
-                    reversed={c.reversed}
-                    className="h-28 w-[74px] drop-shadow-card"
-                  />
-                ) : (
-                  <CardBack className="h-28 w-[74px] drop-shadow-card" />
-                )}
-                <p className="mt-1 text-xs text-body-dim">
-                  {c.name}
-                  {c.reversed ? " (obráceně)" : ""}
-                </p>
-              </div>
-            ))}
-          </div>
+              orientací. Rozložení dle počtu: 1 velká / 3 velké vedle sebe /
+              6 v mřížce 3+3 (viz ReadingCards). */}
+          <ReadingCards
+            cards={cards.map((c) => ({
+              cardId: c.cardId,
+              name: c.name,
+              reversed: c.reversed,
+            }))}
+          />
           {creditUsed && (
             <p className="mt-3 text-sm text-body-dim">
               Odemčeno z balíčku · zbývají{" "}
