@@ -481,7 +481,7 @@ export default function Ritual({
                   onClick={reveal}
                   className="btn-primary"
                 >
-                  Otočit karty
+                  {cardCount === 1 ? "Otočit kartu" : "Otočit karty"}
                 </motion.button>
               </div>
             )}

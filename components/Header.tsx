@@ -27,7 +27,7 @@ export default function Header() {
             alt="Tarot o Lásce"
             width={504}
             height={74}
-            className="h-8 w-auto sm:h-9"
+            className="h-6 w-auto sm:h-8"
             draggable={false}
           />
         </Link>
