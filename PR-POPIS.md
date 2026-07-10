@@ -77,3 +77,20 @@ patičku e-mailů/externích materiálů, ne UI stránek - protože táž věta 
 LogoSymbol (druhý výskyt loga na každé obrazovce). Tagline zůstává v OG,
 Stories a e-mailech. Kdyby zakladatel chtěl symbol v patičce webu vrátit,
 je to jednořádková změna v components/Footer.tsx.
+
+## v1.6.2 - KONFLIKT: pomlčky v teaseru (v1.6.2 §1 vs v1.6.1 §4)
+
+v1.6.2 §1 zavádí tvrdé pravidlo „žádné pomlčky (—) nikde - platí pro
+knihovnu i celý produkt". Zároveň v1.6.1 §4 (golden pravidlo, schválená
+dramaturgie) vyžaduje, aby jednokaretní teaser „končil uprostřed
+myšlenky" - implementováno právě pomlčkou na konci teaseru (golden test
+kontroluje endsWith("—")); pomlčka je i v dramaturgii vícekaretních
+teaserů (lib/mockReadings.ts, 8 výskytů).
+
+ROZHODNUTÍ (do potvrzení zakladatelem): knihovna a všechny nové UI
+stringy jsou bez pomlček (grep čistý); dramaturgické pomlčky v teaserech
+PONECHÁNY, protože je vyžaduje platné golden pravidlo v1.6.1 §4 a jejich
+odstranění by změnilo schválený produktový text. Jediná další pomlčka
+v UI (aria-label hlavičky) nahrazena interpunktem. Pokud má pravidlo
+platit i pro teasery, je potřeba nová formulace střihu od zakladatele
+(např. trojtečka) + úprava golden testů - jednořádková změna.

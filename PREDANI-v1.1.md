@@ -495,3 +495,39 @@ před každým zipem: node scripts/check-imports.mjs).
 - §4: golden test - 1karetní teaser nejmenuje kartu, neprozrazuje směr
   („kloní se"), končí uprostřed myšlenky; 3/6karetní dle 5.1 beze změny.
 - §5 MIMO SCOPE: líce karet nedotčeny.
+
+---
+
+# SESSION 10: dodatek v1.6.2 - knihovna významů karet
+
+**Obsah:** lib/cardLibrary.ts GENEROVÁN ze schváleného souboru
+tarotolasce-vyznamy-karet-KOMPLETNI.md (78 karet, 5 sekcí, texty 1:1 -
+akceptační diff rekonstrukce vs zdroj = IDENTICKÉ, 60394 znaků). NIKDY
+needitovat ručně; při změně obsahu regenerovat ze zdroje.
+
+**Stránky:** /vyznamy-karet (rozcestník 5 sekcí) + /vyznamy-karet/[slug]
+(SSG, generateStaticParams + dynamicParams=false, žádné searchParams
+-> obsah v HTML). Title vzor „Věž: význam karty v lásce | Tarot o Lásce",
+canonical SITE_URL, H1 jméno, H2 Vzpřímeně/Obráceně (odstavce plné vč.
+em slova kvůli diffu 1:1), BreadcrumbList JSON-LD. Dole prolinkování
+karet stejné sady (sameSection) - NAHRAZUJE starou logiku relatedCards
+(odstraněna z lib/cards.ts; smazány app/(light)/vyznam-karet/* a
+lib/cardContent.ts). Redirecty 301: /vyznam-karet(/:slug) -> /vyznamy-karet.
+Header odkazy aktualizovány, sitemap = 78 URL z CARD_LIBRARY.
+
+**CTA (components/LibraryCta.tsx):** věta DOSLOVA ze zdroje, klik jen na
+„Nech si karty vyložit od Nomi" -> /vyklad/novy?from={slug} (ověřeno:
+from je inertní, autostart jede jen z ?q, daily_invite_click se loguje
+jen na /karta-dne). Loguje library_cta_click{slug}. Varianty ?cta=link
+(default, podtržený) / ?cta=pill (rámeček bez výplně) čtené KLIENTSKY,
+stránka zůstává SSG. [ČEKÁ NA ROMANA - vybere variantu]
+
+**Landing §4:** sekce po FAQ před footerem, PŘESNĚ 6 karet v pořadí
+Milenci · Dvojka pohárů · Věž · Rytíř pohárů · Hvězda · Slunce + odkaz
+Všechny karty (slugy ověřeny proti knihovně).
+
+**KONFLIKT (v PR-POPIS.md):** v1.6.2 §1 „žádné pomlčky nikde - celý
+produkt" vs v1.6.1 §4 golden „teaser končí uprostřed myšlenky" (—).
+Rozhodnutí: knihovna + UI bez pomlček (aria-label hlavičky opraven);
+dramaturgické — v teaserech (lib/mockReadings.ts) PONECHÁNY do vyjádření
+zakladatele.

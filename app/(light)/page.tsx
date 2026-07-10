@@ -156,7 +156,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Knihovna karet (SEO; není v zrušených sekcích §7.5) */}
+      {/* Knihovna karet (v1.6.2 §4: SEO vstup po FAQ, před footerem;
+          6 karet přesně dle rozhodnutí zakladatele, v tomto pořadí) */}
       <section className="mt-16 rounded-2xl border border-surface bg-surface p-6">
         <h2 className="font-display text-[30px] leading-[1.15] font-semibold text-body">
           Co znamenají karty v lásce
@@ -166,22 +167,23 @@ export default function LandingPage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {[
-            ["zamilovani", "Zamilovaní"],
+            ["milenci", "Milenci"],
+            ["dvojka-poharu", "Dvojka pohárů"],
             ["vez", "Věž"],
-            ["smrt", "Smrt"],
-            ["dvojka-pohary", "Dvojka pohárů"],
-            ["trojka-mece", "Trojka mečů"],
+            ["rytir-poharu", "Rytíř pohárů"],
+            ["hvezda", "Hvězda"],
+            ["slunce", "Slunce"],
           ].map(([slug, name]) => (
             <Link
               key={slug}
-              href={`/vyznam-karet/${slug}`}
+              href={`/vyznamy-karet/${slug}`}
               className="rounded-full border border-surface px-4 py-2 text-sm text-body-dim hover:border-accent-dim hover:text-body"
             >
               {name}
             </Link>
           ))}
           <Link
-            href="/vyznam-karet"
+            href="/vyznamy-karet"
             className="rounded-full border border-accent-dim px-4 py-2 text-sm text-accent-soft hover:border-accent"
           >
             Všechny karty

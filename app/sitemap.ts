@@ -1,8 +1,7 @@
 // Generovaná sitemap (kapitola 10.6): jen veřejné stránky.
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { DECK } from "@/lib/cards";
-import { hasFullContent } from "@/lib/cardContent";
+import { CARD_LIBRARY } from "@/lib/cardLibrary";
 import { INTENTS } from "@/lib/intents";
 
 const BASE = SITE_URL;
@@ -12,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/karta-dne",
     "/kontakt",
-    "/vyznam-karet",
+    "/vyznamy-karet",
     "/cenik",
     "/obchodni-podminky",
     "/ochrana-osobnich-udaju",
@@ -22,10 +21,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: p === "" ? 1 : 0.7,
   }));
 
-  // Jen karty s plně napsaným obsahem; placeholder (TODO_CONTENT) se přidají,
-  // až budou doplněné, aby se neindexovaly tenké stránky.
-  const cardPages = DECK.filter((c) => hasFullContent(c.id)).map((c) => ({
-    url: `${BASE}/vyznam-karet/${c.id}`,
+  // Knihovna významů (v1.6.2): všech 78 karet má plný schválený obsah.
+  const cardPages = CARD_LIBRARY.map((c) => ({
+    url: `${BASE}/vyznamy-karet/${c.slug}`,
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));

@@ -85,9 +85,3 @@ export const CARD_BY_ID: Record<string, Card> = Object.fromEntries(
   DECK.map((c) => [c.id, c])
 );
 
-export function relatedCards(id: string): Card[] {
-  // 3 související karty: deterministicky podle pozice v balíčku
-  const i = DECK.findIndex((c) => c.id === id);
-  if (i < 0) return DECK.slice(0, 3);
-  return [DECK[(i + 7) % 78], DECK[(i + 21) % 78], DECK[(i + 40) % 78]];
-}

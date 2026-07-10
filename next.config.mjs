@@ -4,6 +4,11 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/reklamace", destination: "/obchodni-podminky", permanent: true },
+      // v1.6.2: knihovna přesunuta na /vyznamy-karet (nové slugy dle názvů;
+      // staré URL po id karet přesměrovat na rozcestník - 1:1 mapa id->slug
+      // není nutná, rozcestník návštěvníka navede)
+      { source: "/vyznam-karet", destination: "/vyznamy-karet", permanent: true },
+      { source: "/vyznam-karet/:slug", destination: "/vyznamy-karet", permanent: true },
     ];
   },
   reactStrictMode: true,

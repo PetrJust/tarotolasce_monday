@@ -20,7 +20,7 @@ export default function Header() {
         {/* Oficiální wordmark (dodán zakladatelem: public/logo/
             wordmark-only.png). Nahrazuje textovou verzi v Loře. Výška
             fixní, šířka dopočítaná dle poměru (504×74). */}
-        <Link href="/" className="flex items-center" aria-label="Tarot o Lásce — domů">
+        <Link href="/" className="flex items-center" aria-label="Tarot o Lásce · domů">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo/wordmark-only.png"
@@ -44,7 +44,7 @@ export default function Header() {
             <Link href="/karta-dne" className="text-sm text-body-dim hover:text-body">Karta dne</Link>
             <Link href="/historie" className="text-sm text-body-dim hover:text-body">Historie</Link>
             <Link href="/cenik" className="text-sm text-body-dim hover:text-body">Ceník</Link>
-            <Link href="/vyznam-karet" className="text-sm text-body-dim hover:text-body">Významy karet</Link>
+            <Link href="/vyznamy-karet" className="text-sm text-body-dim hover:text-body">Významy karet</Link>
           </nav>
           {!loading && (
             <Link href={accountHref} className="text-sm font-semibold text-accent-soft hover:text-accent">
@@ -69,7 +69,7 @@ export default function Header() {
           <Link href="/karta-dne" onClick={() => setOpen(false)} className="block py-2 text-body">Karta dne</Link>
           <Link href="/historie" onClick={() => setOpen(false)} className="block py-2 text-body">Historie</Link>
           <Link href="/cenik" onClick={() => setOpen(false)} className="block py-2 text-body">Ceník</Link>
-          <Link href="/vyznam-karet" onClick={() => setOpen(false)} className="block py-2 text-body">Významy karet</Link>
+          <Link href="/vyznamy-karet" onClick={() => setOpen(false)} className="block py-2 text-body">Významy karet</Link>
         </nav>
       )}
     </header>
