@@ -50,7 +50,9 @@ export default function ProfilPage() {
     fetch("/api/readings")
       .then((r) => r.json())
       .then((d) => {
-        const items = Array.isArray(d?.items) ? d.items : [];
+        // API vrací { readings } (cookie + server, sjednocené s historií)
+        const items = Array.isArray(d?.readings) ? d.readings : [];
+        setReads(items.length);
         if (items.length) setLastReading(items[0]);
       })
       .catch(() => {});

@@ -7,7 +7,8 @@ import { logEvent } from "@/lib/analytics";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { PickedCard } from "@/components/Ritual";
-import { CardBack } from "@/components/TarotCard";
+import { CardBack, CardFace } from "@/components/TarotCard";
+import { CARD_BY_ID } from "@/lib/cards";
 import ReadingStream from "@/components/ReadingStream";
 import OtpInput from "@/components/OtpInput";
 import { PERSONA_NAME, PERSONA_FULL } from "@/lib/persona";
@@ -311,13 +312,28 @@ export default function KartaDnePage() {
           <div className="mx-auto max-w-40 text-center">
             {/* v1.6 §6 DOSLOVA (po otočení) */}
             <span className="text-xs text-accent-soft">Tvoje karta dne</span>
-            <div className="mt-1 rounded-xl border border-surface bg-cream/95 p-4 text-plum-900">
-              <span className="block text-4xl">{card.symbol ?? "✦"}</span>
-              <span className="mt-1 block text-sm font-medium">
-                {card.name}
-                {card.reversed ? " (obráceně)" : ""}
-              </span>
-            </div>
+            {CARD_BY_ID[card.cardId] ? (
+              // Ilustrace karty (obrázek, se SVG fallbackem) + název pod ní
+              <div className="mt-1">
+                <CardFace
+                  card={CARD_BY_ID[card.cardId]}
+                  reversed={card.reversed}
+                  className="mx-auto aspect-[74/112] w-full drop-shadow-card"
+                />
+                <span className="mt-2 block text-sm font-medium text-body">
+                  {card.name}
+                  {card.reversed ? " (obráceně)" : ""}
+                </span>
+              </div>
+            ) : (
+              <div className="mt-1 rounded-xl border border-surface bg-cream/95 p-4 text-plum-900">
+                <span className="block text-4xl">{card.symbol ?? "✦"}</span>
+                <span className="mt-1 block text-sm font-medium">
+                  {card.name}
+                  {card.reversed ? " (obráceně)" : ""}
+                </span>
+              </div>
+            )}
           </div>
 
           <p className="mt-6 text-center text-xs uppercase tracking-wider text-body-dim">
